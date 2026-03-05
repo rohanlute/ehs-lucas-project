@@ -1,0 +1,817 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Environmental Data Entry{% endblock %}
+
+{% block extra_css %}
+<style>
+
+:root {
+    --border:#e2e8f0;
+    --header-bg:#f1f5f9;
+    --total-bg:#eef2ff;
+    --quarter-bg:#f8fafc;
+}
+
+/* ==================== HEADER SECTION ==================== */
+
+.header-section {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    border-radius: 10px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+    color: white;
+}
+
+.header-content {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:1rem;
+}
+
+.header-info h2 {
+    margin:0 0 0.75rem 0;
+    font-size:1.8rem;
+    font-weight:700;
+    color:white;
+}
+
+.plant-info {
+    display:flex;
+    flex-wrap:wrap;
+    gap:1.5rem;
+    font-size:0.95rem;
+    opacity:0.95;
+}
+
+.plant-info strong{
+    color:rgba(255,255,255,0.9);
+    font-weight:600;
+}
+
+.btn-manage-questions{
+    background:white;
+    color:#1e40af;
+    padding:10px 18px;
+    border-radius:8px;
+    text-decoration:none;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+.env-data-container{
+    padding:1.5rem;
+    background:#f8fafc;
+}
+
+.table-wrapper{
+    overflow-x:auto;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:#fff;
+}
+
+.main-table{
+    border-collapse:separate;
+    border-spacing:0;
+    width:max-content;
+    min-width:1900px;
+    table-layout:fixed;
+}
+
+.main-table th,
+.main-table td{
+    border:1px solid var(--border);
+    padding:6px;
+    font-size:12px;
+    text-align:center;
+    vertical-align:middle;
+    background:#fff;
+}
+
+.main-table thead th{
+    background:var(--header-bg);
+    font-weight:600;
+    position:sticky;
+    top:0;
+    z-index:3;
+}
+
+.main-table th:nth-child(1),
+.main-table td:nth-child(1){
+    width:45px;
+    min-width:45px;
+}
+
+.main-table th:nth-child(2),
+.main-table td:nth-child(2){
+    width:130px;
+    min-width:130px;
+}
+
+.main-table th:nth-child(3),
+.main-table td:nth-child(3){
+    width:190px;
+    min-width:190px;
+}
+
+.sticky-col{
+    position:sticky;
+    left:0;
+    background:#fff;
+    z-index:4;
+}
+
+.sticky-col-2{ left:45px; }
+.sticky-col-3{ left:175px; }
+.sticky-col-4{ left:365px; }
+.sticky-col-5{ left:485px; }
+
+.sticky-col,
+.sticky-col-2,
+.sticky-col-3,
+.sticky-col-4,
+.sticky-col-5{
+    border-right:1px solid var(--border);
+    box-shadow:2px 0 0 var(--border);
+}
+
+.main-table thead .sticky-col,
+.main-table thead .sticky-col-2,
+.main-table thead .sticky-col-3,
+.main-table thead .sticky-col-4,
+.main-table thead .sticky-col-5{
+    background:var(--header-bg);
+    z-index:6;
+}
+
+.data-input{
+    width:90px;
+    height:28px;
+    padding:4px;
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    font-size:12px;
+    text-align:right;
+    box-sizing:border-box;
+}
+
+.select-box{
+    text-align:center;
+}
+
+.main-table td:not(.sticky-col) .data-input{
+    margin:4px;
+}
+
+.data-input[readonly]{
+    background:#f1f5f9;
+    font-weight:500;
+}
+
+.quarter-col{
+    background:var(--quarter-bg);
+}
+
+.total-row td{
+    background:var(--total-bg);
+    font-weight:600;
+}
+
+.main-table th:nth-child(5),
+.main-table td:nth-child(5){
+    border-right:2px solid #cbd5e1;
+}
+
+.table-wrapper::-webkit-scrollbar{
+    height:8px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb{
+    background:#cbd5e1;
+    border-radius:10px;
+}
+
+</style>
+{% endblock %}
+
+
+
+{% block content %}
+
+<div class="env-data-container">
+
+<div class="header-section">
+<div class="header-content">
+
+<div class="header-info">
+<h2><i class="fas fa-leaf"></i> Environmental Waste Data Entry</h2>
+
+<div class="plant-info">
+<span><strong>Currently Editing:</strong> {{ selected_plant.name }}</span>
+<span><strong>Year:</strong> {{ current_year }}</span>
+<span><strong>Last Updated:</strong> {% now "F d, Y - H:i" %}</span>
+</div>
+
+</div>
+
+{% if user.is_superuser or user.is_staff or user.is_admin_user %}
+<a href="{% url 'environmental_mis:report_config_list' %}" class="btn-manage-questions">
+<i class="fas fa-cog"></i> Manage Questions
+</a>
+{% endif %}
+
+</div>
+</div>
+
+
+<div class="table-wrapper">
+
+<table class="main-table" id="rightTable">
+
+<thead>
+<tr>
+
+<th class="sticky-col">SL NO.</th>
+<th class="sticky-col sticky-col-2">CATEGORY</th>
+<th class="sticky-col sticky-col-3">QUESTION (UNIT)</th>
+<th class="sticky-col sticky-col-4" style="width:120px">PART CODE</th>
+<th class="sticky-col sticky-col-5" style="width:120px">TREATMENT</th>
+
+<th>Jan QTY</th><th>Jan COST</th>
+<th>Feb QTY</th><th>Feb COST</th>
+<th>Mar QTY</th><th>Mar COST</th>
+<th class="quarter-col">I Q (QTY)</th><th class="quarter-col">I Q (COST)</th>
+
+<th>Apr QTY</th><th>Apr COST</th>
+<th>May QTY</th><th>May COST</th>
+<th>Jun QTY</th><th>Jun COST</th>
+<th class="quarter-col">II Q (QTY)</th><th class="quarter-col">II Q (COST)</th>
+
+<th>Jul QTY</th><th>Jul COST</th>
+<th>Aug QTY</th><th>Aug COST</th>
+<th>Sep QTY</th><th>Sep COST</th>
+<th class="quarter-col">III Q (QTY)</th><th class="quarter-col">III Q (COST)</th>
+
+<th>Oct QTY</th><th>Oct COST</th>
+<th>Nov QTY</th><th>Nov COST</th>
+<th>Dec QTY</th><th>Dec COST</th>
+<th class="quarter-col">IV Q (QTY)</th><th class="quarter-col">IV Q (COST)</th>
+
+<th>TOTAL (QTY)</th>
+<th>TOTAL (COST)</th>
+
+</tr>
+</thead>
+
+<tbody>
+
+{% for row in report_rows %}
+
+<tr data-config="{{ row.config_id }}" class="{% if row.is_total %}total-row{% endif %}">
+
+<td class="sticky-col">{{ row.sl_no }}</td>
+
+<td class="sticky-col sticky-col-2">{{ row.category }}</td>
+
+<td class="sticky-col sticky-col-3">
+{% if row.is_total %}
+<strong>{{ row.scrap }}</strong>
+{% else %}
+{{ row.scrap }} ({{ row.unit }})
+{% endif %}
+</td>
+
+
+<!-- PART CODE -->
+<td class="sticky-col sticky-col-4">
+
+{% if not row.is_total %}
+
+<input type="text"
+class="data-input part-code"
+value="{% if row.saved %}{{ row.saved.part_code }}{% endif %}">
+
+{% endif %}
+
+</td>
+
+
+<!-- TREATMENT -->
+<td class="sticky-col sticky-col-5">
+
+{% if not row.is_total %}
+
+<select class="data-input treatment">
+
+<option value="R"
+{% if row.saved and row.saved.treatment == "R" %}selected{% endif %}>
+Recycling
+</option>
+
+<option value="D"
+{% if row.saved and row.saved.treatment == "D" %}selected{% endif %}>
+Disposal
+</option>
+
+<option value="S"
+{% if row.saved and row.saved.treatment == "S" %}selected{% endif %}>
+Storage
+</option>
+
+</select>
+
+{% endif %}
+
+</td>
+
+
+<!-- JAN -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.jan_qty|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+<td>
+<input type="text" class="data-input month-cost" value="{% if row.saved %}{{ row.saved.jan_cost|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+
+<!-- FEB -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.feb_qty|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.feb_cost|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+
+<!-- MAR -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.mar_qty|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.mar_cost|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+
+<!-- Q1 -->
+<td class="quarter-col">
+<input type="text" class="data-input quarter-qty"
+value="{% if row.saved %}{{ row.saved.q1_quantity|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+<td class="quarter-col">
+<input type="text" class="data-input quarter-cost"
+value="{% if row.saved %}{{ row.saved.q1_cost|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+
+<!-- APR -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.apr_qty|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.apr_cost|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+
+<!-- MAY -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.may_qty|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.may_cost|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+
+<!-- JUN -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.jun_qty|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.jun_cost|floatformat:2 }}{% endif %}"
+{% if row.is_total %}readonly{% endif %}>
+</td>
+
+
+<!-- Q2 -->
+<td class="quarter-col">
+<input type="text" class="data-input quarter-qty"
+value="{% if row.saved %}{{ row.saved.q2_quantity|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+<td class="quarter-col">
+<input type="text" class="data-input quarter-cost"
+value="{% if row.saved %}{{ row.saved.q2_cost|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+
+<!-- JUL -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.jul_qty|floatformat:2 }}{% endif %}">
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.jul_cost|floatformat:2 }}{% endif %}">
+</td>
+
+
+<!-- AUG -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.aug_qty|floatformat:2 }}{% endif %}">
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.aug_cost|floatformat:2 }}{% endif %}">
+</td>
+
+
+<!-- SEP -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.sep_qty|floatformat:2 }}{% endif %}">
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.sep_cost|floatformat:2 }}{% endif %}">
+</td>
+
+
+<!-- Q3 -->
+<td class="quarter-col">
+<input type="text" class="data-input quarter-qty"
+value="{% if row.saved %}{{ row.saved.q3_quantity|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+<td class="quarter-col">
+<input type="text" class="data-input quarter-cost"
+value="{% if row.saved %}{{ row.saved.q3_cost|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+
+<!-- OCT -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.oct_qty|floatformat:2 }}{% endif %}">
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.oct_cost|floatformat:2 }}{% endif %}">
+</td>
+
+
+<!-- NOV -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.nov_qty|floatformat:2 }}{% endif %}">
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.nov_cost|floatformat:2 }}{% endif %}">
+</td>
+
+
+<!-- DEC -->
+<td>
+<input type="text" class="data-input month-qty"
+value="{% if row.saved %}{{ row.saved.dec_qty|floatformat:2 }}{% endif %}">
+</td>
+
+<td>
+<input type="text" class="data-input month-cost"
+value="{% if row.saved %}{{ row.saved.dec_cost|floatformat:2 }}{% endif %}">
+</td>
+
+
+<!-- Q4 -->
+<td class="quarter-col">
+<input type="text" class="data-input quarter-qty"
+value="{% if row.saved %}{{ row.saved.q4_quantity|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+<td class="quarter-col">
+<input type="text" class="data-input quarter-cost"
+value="{% if row.saved %}{{ row.saved.q4_cost|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+
+<!-- TOTAL -->
+<td>
+<input type="text" class="data-input total-qty"
+value="{% if row.saved %}{{ row.saved.total_quantity|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+<td>
+<input type="text" class="data-input total-cost"
+value="{% if row.saved %}{{ row.saved.total_cost|floatformat:2 }}{% endif %}"
+readonly>
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+</table>
+
+</div>
+
+
+<div style="margin-top:20px;text-align:right;">
+<button id="saveDataBtn" class="btn btn-primary">
+<i class="fas fa-save"></i> Save Report
+</button>
+</div>
+
+</div>
+
+
+<script>
+
+function calculateTotals(){
+
+    const rows = document.querySelectorAll("#rightTable tbody tr");
+
+    const monthCount = 12;
+    const quarterCount = 4;
+
+    let catMonthQty = new Array(monthCount).fill(0);
+    let catMonthCost = new Array(monthCount).fill(0);
+
+    let catQuarterQty = new Array(quarterCount).fill(0);
+    let catQuarterCost = new Array(quarterCount).fill(0);
+
+    let catTotalQty = 0;
+    let catTotalCost = 0;
+
+    rows.forEach(row => {
+
+        const monthQty = row.querySelectorAll(".month-qty");
+        const monthCost = row.querySelectorAll(".month-cost");
+        const quarterQty = row.querySelectorAll(".quarter-qty");
+        const quarterCost = row.querySelectorAll(".quarter-cost");
+
+        if(monthQty.length !== 12) return;
+
+        if(!row.classList.contains("total-row")){
+
+            let rowQty = 0;
+            let rowCost = 0;
+
+            for(let i=0;i<12;i++){
+
+                let qty = parseFloat(monthQty[i].value || 0);
+                let cost = parseFloat(monthCost[i].value || 0);
+
+                rowQty += qty;
+                rowCost += cost;
+
+                catMonthQty[i] += qty;
+                catMonthCost[i] += cost;
+            }
+
+            // Quarter calculations
+            for(let q=0;q<4;q++){
+
+                let qQty = 0;
+                let qCost = 0;
+
+                for(let m=q*3; m<(q*3)+3; m++){
+
+                    qQty += parseFloat(monthQty[m].value || 0);
+                    qCost += parseFloat(monthCost[m].value || 0);
+                }
+
+                if(quarterQty[q]) quarterQty[q].value = qQty.toFixed(2);
+                if(quarterCost[q]) quarterCost[q].value = qCost.toFixed(2);
+
+                catQuarterQty[q] += qQty;
+                catQuarterCost[q] += qCost;
+            }
+
+            const totalQty = row.querySelector(".total-qty");
+            const totalCost = row.querySelector(".total-cost");
+
+            if(totalQty) totalQty.value = rowQty.toFixed(2);
+            if(totalCost) totalCost.value = rowCost.toFixed(2);
+
+            catTotalQty += rowQty;
+            catTotalCost += rowCost;
+
+        }
+        else{
+
+            for(let i=0;i<12;i++){
+
+                monthQty[i].value = catMonthQty[i].toFixed(2);
+                monthCost[i].value = catMonthCost[i].toFixed(2);
+            }
+
+            for(let q=0;q<4;q++){
+
+                if(quarterQty[q]) quarterQty[q].value = catQuarterQty[q].toFixed(2);
+                if(quarterCost[q]) quarterCost[q].value = catQuarterCost[q].toFixed(2);
+            }
+
+            const totalQty = row.querySelector(".total-qty");
+            const totalCost = row.querySelector(".total-cost");
+
+            if(totalQty) totalQty.value = catTotalQty.toFixed(2);
+            if(totalCost) totalCost.value = catTotalCost.toFixed(2);
+
+            catMonthQty.fill(0);
+            catMonthCost.fill(0);
+            catQuarterQty.fill(0);
+            catQuarterCost.fill(0);
+
+            catTotalQty = 0;
+            catTotalCost = 0;
+        }
+
+    });
+}
+
+document.addEventListener("input", function(e){
+
+    if(e.target.classList.contains("month-qty") || 
+       e.target.classList.contains("month-cost")){
+
+        calculateTotals();
+    }
+
+});
+
+window.addEventListener("load", calculateTotals);
+
+</script>
+
+
+<script>
+
+document.getElementById("saveDataBtn").addEventListener("click", function(){
+
+    const rows = document.querySelectorAll("#rightTable tbody tr");
+
+    const payload = [];
+
+    rows.forEach(row => {
+
+        if(row.classList.contains("total-row")) return;
+
+        const config = row.dataset.config;
+
+        if(!config || config === "None") return;
+
+        const qty = row.querySelectorAll(".month-qty");
+        const cost = row.querySelectorAll(".month-cost");
+
+        if(qty.length !== 12 || cost.length !== 12) return;
+
+        const partCode = row.querySelector(".part-code")?.value || "";
+        const treatment = row.querySelector(".treatment")?.value || "";
+
+        let totalQty = 0;
+
+        qty.forEach(q => {
+            totalQty += parseFloat(q.value || 0);
+        });
+
+        if(totalQty === 0 && partCode === "" && treatment === ""){
+            return;
+        }
+
+        payload.push({
+
+            config_id: config,
+
+            part_code: partCode,
+            treatment: treatment,
+
+            jan_qty: parseFloat(qty[0].value || 0),
+            feb_qty: parseFloat(qty[1].value || 0),
+            mar_qty: parseFloat(qty[2].value || 0),
+
+            apr_qty: parseFloat(qty[3].value || 0),
+            may_qty: parseFloat(qty[4].value || 0),
+            jun_qty: parseFloat(qty[5].value || 0),
+
+            jul_qty: parseFloat(qty[6].value || 0),
+            aug_qty: parseFloat(qty[7].value || 0),
+            sep_qty: parseFloat(qty[8].value || 0),
+
+            oct_qty: parseFloat(qty[9].value || 0),
+            nov_qty: parseFloat(qty[10].value || 0),
+            dec_qty: parseFloat(qty[11].value || 0),
+
+            jan_cost: parseFloat(cost[0].value || 0),
+            feb_cost: parseFloat(cost[1].value || 0),
+            mar_cost: parseFloat(cost[2].value || 0),
+
+            apr_cost: parseFloat(cost[3].value || 0),
+            may_cost: parseFloat(cost[4].value || 0),
+            jun_cost: parseFloat(cost[5].value || 0),
+
+            jul_cost: parseFloat(cost[6].value || 0),
+            aug_cost: parseFloat(cost[7].value || 0),
+            sep_cost: parseFloat(cost[8].value || 0),
+
+            oct_cost: parseFloat(cost[9].value || 0),
+            nov_cost: parseFloat(cost[10].value || 0),
+            dec_cost: parseFloat(cost[11].value || 0)
+
+        });
+
+    });
+
+    if(payload.length === 0){
+
+        alert("No data to save.");
+        return;
+    }
+
+    fetch("{% url 'environmental_mis:save_manufacturing_waste' %}", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+
+        body: JSON.stringify(payload)
+
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        if(data.status === "success"){
+
+            alert("Data added successfully");
+            location.reload();
+
+        }else{
+
+            alert("Error saving data");
+        }
+
+    })
+    .catch(err => {
+
+        console.error(err);
+        alert("Something went wrong while saving.");
+
+    });
+
+});
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,100 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Update Role{% endblock %}
+{% block page_title %}Update Role{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounts:role-list' %}">Role List</a></li>
+<li class="breadcrumb-item active">Update Role {{ role.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" id="role_form">
+      {% csrf_token %}
+
+      <!-- Role Name -->
+      <div class="mb-3">
+        <label class="fw-semibold">
+          Role <span class="text-danger">*</span>
+        </label>
+        <input
+          type="text"
+          class="form-control"
+          name="role_name"
+          id="role_name"
+          value="{{ role.name }}"
+          required
+        >
+      </div>
+
+      <!-- Description -->
+      <div class="mb-4">
+        <label class="fw-semibold">Description</label>
+        <textarea
+          class="form-control"
+          name="description"
+          id="role_description"
+          rows="3"
+        >{{ role.description }}</textarea>
+      </div>
+
+      <!-- Permissions -->
+      <div class="d-flex justify-content-between mb-2">
+        <label class="fw-semibold">Permissions</label>
+        <div>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="selectAll()">Select All</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAll()">Deselect All</button>
+        </div>
+      </div>
+
+      <div class="permissions-box border rounded p-3" style="max-height:300px;overflow:auto;">
+        {% for perm in permission %}
+          <div class="form-check mb-2">
+            <input
+              class="form-check-input permission-checkbox"
+              type="checkbox"
+              name="permissions"
+              value="{{ perm.id }}"
+              id="perm_{{ perm.id }}"
+              {% if perm.id in role_permissions %}checked{% endif %}
+            >
+            <label class="form-check-label" for="perm_{{ perm.id }}">
+              {{ perm.name }}
+              <small class="text-muted">({{ perm.code }})</small>
+            </label>
+          </div>
+        {% empty %}
+          <p class="text-muted">No permissions available</p>
+        {% endfor %}
+      </div>
+
+      <!-- Buttons -->
+      <div class="mt-4 text-end">
+        <a href="{% url 'accounts:role-list' %}" class="btn btn-outline-secondary">
+          Cancel
+        </a>
+        <button type="submit" class="btn btn-primary">
+          Update Role
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock content %}
+
+{% block extra_js %}
+<script>
+function selectAll() {
+  document.querySelectorAll(".permission-checkbox").forEach(cb => cb.checked = true);
+}
+
+function deselectAll() {
+  document.querySelectorAll(".permission-checkbox").forEach(cb => cb.checked = false);
+}
+</script>
+{% endblock extra_js %}

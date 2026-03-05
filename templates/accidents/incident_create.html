@@ -1,0 +1,965 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Report New Injury {% endblock %}
+{% block page_title %}Report New Injury{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Unsafe Acts and Conditions Section */
+.unsafe-section {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    margin-bottom: 20px;
+}
+
+.unsafe-section h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.unsafe-checkbox-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.unsafe-checkbox-item {
+    padding: 5px 0;
+}
+
+.unsafe-checkbox-item .form-check {
+    margin-bottom: 0;
+}
+
+.unsafe-checkbox-item .form-check-label {
+    font-size: 0.95rem;
+    color: #495057;
+    cursor: pointer;
+    padding-left: 5px;
+}
+
+.unsafe-checkbox-item .form-check-input {
+    margin-top: 0.25rem;
+}
+
+.unsafe-checkbox-item .form-check-input:checked ~ .form-check-label {
+    color: #000;
+    font-weight: 500;
+}
+
+.other-explanation-box {
+    margin-top: 10px;
+    display: none;
+}
+
+.other-explanation-box.show {
+    display: block;
+}
+
+/* Affected Person Section Styling */
+.affected-person-section {
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.affected-person-section h5 {
+    color: #dc3545;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #dc3545;
+}
+
+.form-group label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 5px;
+}
+
+.readonly-field {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+}
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accidents:dashboard' %}">Injury Management</a></li>
+<li class="breadcrumb-item active">Report New Injury</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <div class="ehs-card">
+      <div class="card-header bg-danger text-white">
+        <h3 class="card-title mb-0">
+          <i class="fas fa-file-medical mr-2"></i>Report New Injury
+        </h3>
+      </div>
+      
+      <form method="POST" id="incidentForm" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="affected_body_parts_json" id="affectedBodyPartsJson">
+        <input type="hidden" name="unsafe_acts_json" id="unsafeActsJson">
+        <input type="hidden" name="unsafe_conditions_json" id="unsafeConditionsJson">
+        
+        <div class="card-body">
+          <!-- Alert Info -->
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle mr-2"></i>
+            <strong>Note:</strong> Investigation report is required within 7 days of injury occurrence.
+            All fields marked with <span class="text-danger">*</span> are mandatory.
+          </div>
+
+          <!-- Form Errors Display -->
+          {% if form.errors or form.non_field_errors %}
+          <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle mr-2"></i>Please Correct the Following Errors:</h5>
+            
+            {% if form.non_field_errors %}
+              <ul class="mb-2">
+                {% for error in form.non_field_errors %}
+                  <li><strong>{{ error }}</strong></li>
+                {% endfor %}
+              </ul>
+            {% endif %}
+            
+            {% if form.errors %}
+              <ul class="mb-0">
+                {% for field in form %}
+                  {% if field.errors %}
+                    {% for error in field.errors %}
+                      <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                    {% endfor %}
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            {% endif %}
+            
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          {% endif %}
+
+          <!-- Incident Type & Date/Time -->
+          <h5 class="mb-3"><i class="fas fa-calendar-alt mr-2"></i>Injury Information</h5>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label for="id_incident_type">Type of Injury <span class="text-danger">*</span></label>
+              <select name="incident_type" id="id_incident_type" class="form-control" required>
+                <option value="">Select Injury Type</option> 
+               {%for incident_type in active_incident_types %}
+                <option value="{{incident_type.id}}" data-code="{{ incident_type.code }}">
+                     {{ incident_type.name }}({{ incident_type.code }})
+                </option>
+                {% endfor %}
+
+              </select>
+              {% if form.incident_type.errors %}
+                <div class="text-danger">{{ form.incident_type.errors }}</div>
+              {% endif %}
+              {% if not active_incident_types %}
+                <div class="alert alert-warning mt-2">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    No active injury types found. Please contact administrator to add injury types.
+                </div>
+            {% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="{{ form.incident_date.id_for_label }}">Date of Injury <span class="text-danger">*</span></label>
+              {{ form.incident_date }}
+              {% if form.incident_date.errors %}
+                <div class="text-danger">{{ form.incident_date.errors }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="{{ form.incident_time.id_for_label }}">Time of Injury <span class="text-danger">*</span></label>
+              {{ form.incident_time }}
+              {% if form.incident_time.errors %}
+                <div class="text-danger">{{ form.incident_time.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Location Information -->
+<h5 class="mb-3"><i class="fas fa-map-marker-alt mr-2"></i>Location Information</h5>
+<div class="row">
+    
+    <!-- Plant Field -->
+    <div class="col-md-3 mb-3">
+        <label for="id_plant">Plant <span class="text-danger">*</span></label>
+        
+        {% if user_assigned_plants.count == 1 %}
+            <!-- If user has only ONE assigned plant, show it as read-only text -->
+            <input type="text" class="form-control" 
+                   value="{{ user_assigned_plants.first.name }} ({{ user_assigned_plants.first.code }})" 
+                   readonly style="background-color: #e9ecef;">
+            <!-- IMPORTANT: Add a hidden input to submit the value -->
+            <input type="hidden" name="plant" id="id_plant" value="{{ user_assigned_plants.first.id }}">
+        {% else %}
+            <!-- If user has multiple (or zero) plants, show the dropdown -->
+            {{ form.plant }}
+        {% endif %}
+
+        {% if form.plant.errors %}
+          <div class="text-danger">{{ form.plant.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <!-- Zone Field -->
+    <div class="col-md-3 mb-3">
+        <label for="id_zone">Zone</label>
+        
+        {% if user_assigned_zones.count == 1 %}
+            <input type="text" class="form-control" 
+                   value="{{ user_assigned_zones.first.name }} ({{ user_assigned_zones.first.code }})" 
+                   readonly style="background-color: #e9ecef;">
+            <input type="hidden" name="zone" id="id_zone" value="{{ user_assigned_zones.first.id }}">
+        {% else %}
+            <!-- This dropdown will be populated by AJAX -->
+            {{ form.zone }}
+        {% endif %}
+
+        {% if form.zone.errors %}
+          <div class="text-danger">{{ form.zone.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <!-- Location Field -->
+    <div class="col-md-3 mb-3">
+        <label for="id_location">Location <span class="text-danger">*</span></label>
+        
+        {% if user_assigned_locations.count == 1 %}
+            <input type="text" class="form-control" 
+                   value="{{ user_assigned_locations.first.name }} ({{ user_assigned_locations.first.code }})" 
+                   readonly style="background-color: #e9ecef;">
+            <input type="hidden" name="location" id="id_location" value="{{ user_assigned_locations.first.id }}">
+        {% else %}
+            <!-- This dropdown will be populated by AJAX -->
+            {{ form.location }}
+        {% endif %}
+
+        {% if form.location.errors %}
+          <div class="text-danger">{{ form.location.errors }}</div>
+        {% endif %}
+    </div>
+    
+    <!-- Sub-Location Field -->
+    <div class="col-md-3 mb-3">
+        <label for="id_sublocation">Sub-Location</label>
+        
+        {% if user_assigned_sublocations.count == 1 %}
+            <input type="text" class="form-control" 
+                   value="{{ user_assigned_sublocations.first.name }}{% if user_assigned_sublocations.first.code %} ({{ user_assigned_sublocations.first.code }}){% endif %}" 
+                   readonly style="background-color: #e9ecef;">
+            <input type="hidden" name="sublocation" id="id_sublocation" value="{{ user_assigned_sublocations.first.id }}">
+        {% else %}
+            <!-- This dropdown will be populated by AJAX -->
+            {{ form.sublocation }}
+        {% endif %}
+
+        {% if form.sublocation.errors %}
+          <div class="text-danger">{{ form.sublocation.errors }}</div>
+        {% endif %}
+    </div>
+</div>
+          <!-- Additional Location Details -->
+          <div class="row mt-3">
+            <div class="col-md-12 mb-3">
+              <label for="id_additional_location_details">Additional Location Details</label>
+              <textarea name="additional_location_details" id="id_additional_location_details" class="form-control" rows="3" placeholder="Specific area, equipment, or landmark near the hazard"></textarea>
+              <small class="form-text text-muted">Optional: Provide specific details about the exact location (e.g., "Near conveyor belt #3", "Next to chemical storage tank")</small>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Incident Details -->
+          <h5 class="mb-3"><i class="fas fa-file-alt mr-2"></i>Injury Details</h5>
+          
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label for="{{ form.description.id_for_label }}">Detailed Description <span class="text-danger">*</span></label>
+              {{ form.description }}
+              <small class="form-text text-muted">Describe what happened in detail, sequence of events, and circumstances</small>
+              {% if form.description.errors %}
+                <div class="text-danger">{{ form.description.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Unsafe Acts and Unsafe Conditions Section -->
+          <div id="unsafeActsConditionsSection">
+            <h5 class="mb-3"><i class="fas fa-exclamation-triangle mr-2"></i>Unsafe Acts & Unsafe Conditions</h5>
+            
+            <div class="alert alert-warning">
+              <i class="fas fa-info-circle mr-2"></i>
+              <strong>Note:</strong> Select all applicable unsafe acts and/or unsafe conditions that contributed to this incident.
+            </div>
+
+            <div class="row">
+              <!-- Unsafe Acts -->
+              <div class="col-md-6">
+                <div class="unsafe-section">
+                  <h6><i class="fas fa-user-times mr-2"></i>Unsafe Act (Tick one or combination)</h6>
+                  <div class="unsafe-checkbox-grid">
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Operating Equipment without authority" id="ua1">
+                        <label class="form-check-label" for="ua1">Operating Equipment without authority</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Failure to warn / Secure" id="ua2">
+                        <label class="form-check-label" for="ua2">Failure to warn / Secure</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Operating at unsafe speed" id="ua3">
+                        <label class="form-check-label" for="ua3">Operating at unsafe speed</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Bi-passing safety devices/ Interlocks" id="ua4">
+                        <label class="form-check-label" for="ua4">Bi-passing safety devices/ Interlocks</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Using unsafe equipment" id="ua5">
+                        <label class="form-check-label" for="ua5">Using unsafe equipment</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Unsafe loading/unloading/Lifting" id="ua6">
+                        <label class="form-check-label" for="ua6">Unsafe loading/unloading/Lifting</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Improper position for task" id="ua7">
+                        <label class="form-check-label" for="ua7">Improper position for task</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Taking unsafe positions or postures" id="ua8">
+                        <label class="form-check-label" for="ua8">Taking unsafe positions or postures</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Working on dangerous or moving equipment" id="ua9">
+                        <label class="form-check-label" for="ua9">Working on dangerous or moving equipment</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Failure to use PPE" id="ua10">
+                        <label class="form-check-label" for="ua10">Failure to use PPE</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Horse play / Improper personal behavior" id="ua11">
+                        <label class="form-check-label" for="ua11">Horse play / Improper personal behavior</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Servicing equipment while in operation" id="ua12">
+                        <label class="form-check-label" for="ua12">Servicing equipment while in operation</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-act-checkbox" type="checkbox" name="unsafe_act" value="Other (explain)" id="ua13">
+                        <label class="form-check-label" for="ua13">Other (explain)</label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Other explanation text box for Unsafe Acts -->
+                  <div class="other-explanation-box" id="unsafeActsOtherBox">
+                    <label for="unsafe_acts_other">Please explain:</label>
+                    <textarea class="form-control" id="unsafe_acts_other" name="unsafe_acts_other" rows="2" placeholder="Explain the other unsafe act..."></textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Unsafe Conditions -->
+              <div class="col-md-6">
+                <div class="unsafe-section">
+                  <h6><i class="fas fa-hard-hat mr-2"></i>Unsafe Condition (Tick one or combination)</h6>
+                  <div class="unsafe-checkbox-grid">
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Inadequate guards/ barriers" id="uc1">
+                        <label class="form-check-label" for="uc1">Inadequate guards/ barriers</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Defective conditions of machines, tools, equipment" id="uc2">
+                        <label class="form-check-label" for="uc2">Defective conditions of machines, tools, equipment</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Unsafe design or construction" id="uc3">
+                        <label class="form-check-label" for="uc3">Unsafe design or construction</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Inadequate illumination" id="uc4">
+                        <label class="form-check-label" for="uc4">Inadequate illumination</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Inadequate ventilation" id="uc5">
+                        <label class="form-check-label" for="uc5">Inadequate ventilation</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Poor housekeeping" id="uc6">
+                        <label class="form-check-label" for="uc6">Poor housekeeping</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Non-provision of PPE" id="uc7">
+                        <label class="form-check-label" for="uc7">Non-provision of PPE</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Slippery floors" id="uc8">
+                        <label class="form-check-label" for="uc8">Slippery floors</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Broken/Uneven floors" id="uc9">
+                        <label class="form-check-label" for="uc9">Broken/Uneven floors</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Absence of hand rails" id="uc10">
+                        <label class="form-check-label" for="uc10">Absence of hand rails</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Exposure to excessive noise" id="uc11">
+                        <label class="form-check-label" for="uc11">Exposure to excessive noise</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Congested or restricted work areas" id="uc12">
+                        <label class="form-check-label" for="uc12">Congested or restricted work areas</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Extreme temperature" id="uc13">
+                        <label class="form-check-label" for="uc13">Extreme temperature</label>
+                      </div>
+                    </div>
+                    <div class="unsafe-checkbox-item">
+                      <div class="form-check">
+                        <input class="form-check-input unsafe-condition-checkbox" type="checkbox" name="unsafe_condition" value="Other (explain)" id="uc14">
+                        <label class="form-check-label" for="uc14">Other (explain)</label>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Other explanation text box for Unsafe Conditions -->
+                  <div class="other-explanation-box" id="unsafeConditionsOtherBox">
+                    <label for="unsafe_conditions_other">Please explain:</label>
+                    <textarea class="form-control" id="unsafe_conditions_other" name="unsafe_conditions_other" rows="2" placeholder="Explain the other unsafe condition..."></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- ===== NEW AFFECTED PERSON SECTION WITH MANUAL ENTRY ===== -->
+          <div class="affected-person-section">
+            <h5><i class="fas fa-user-injured mr-2"></i>Affected Person Information (Manual Entry)</h5>
+            
+            <div class="alert alert-info mb-3">
+              <i class="fas fa-info-circle mr-2"></i>
+              <strong>Note:</strong> Please enter all details of the affected person manually. All fields marked with <span class="text-danger">*</span> are mandatory.
+            </div>
+
+            <!-- Row 1: Employment Type Dropdown -->
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="id_affected_employment_category">Employment Category <span class="text-danger">*</span></label>
+                <select name="affected_employment_category" id="id_affected_employment_category" class="form-control" required>
+                  <option value="">-- Select Employment Category --</option>
+                  <option value="PERMANENT">Permanent</option>
+                  <option value="CONTRACT">Contract</option>
+                  <!-- <option value="ON_ROLL">On Roll</option> -->
+                </select>
+                <small class="form-text text-muted">Select the employment category</small>
+                {% if form.affected_employment_category.errors %}
+                  <div class="text-danger mt-1">
+                    {% for error in form.affected_employment_category.errors %}
+                      <small><i class="fas fa-exclamation-circle"></i> {{ error }}</small><br>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Row 2: Name, Employee ID, Department -->
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="id_affected_person_name">Name of Affected Person <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="id_affected_person_name" name="affected_person_name" 
+                       placeholder="Enter full name" required maxlength="200">
+                <small class="form-text text-muted">Enter the full name of affected person</small>
+              </div>
+              
+              <div class="col-md-4 mb-3">
+                <label for="id_affected_person_employee_id">Employee ID <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="id_affected_person_employee_id" name="affected_person_employee_id" 
+                       placeholder="Enter employee ID" required maxlength="50">
+                <small class="form-text text-muted">Enter the employee identification number</small>
+              </div>
+              
+              <div class="col-md-4 mb-3">
+                <label for="id_affected_person_department">Department <span class="text-danger">*</span></label>
+                <select name="affected_person_department" id="id_affected_person_department" class="form-control" required>
+                  <option value="">-- Select Department --</option>
+                  {% for department in departments %}
+                    <option value="{{ department.id }}">{{ department.name }}</option>
+                  {% endfor %}
+                </select>
+                <small class="form-text text-muted">Select the department from master list</small>
+              </div>
+            </div>
+
+            <!-- Row 3: Date of Birth, Gender, Age (Auto-calculated) -->
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label for="id_affected_date_of_birth">Date of Birth <span class="text-danger">*</span></label>
+                <input type="date" class="form-control {% if form.affected_date_of_birth.errors %}is-invalid{% endif %}" id="id_affected_date_of_birth" name="affected_date_of_birth" required>
+                <small class="form-text text-muted">Select the date of birth</small>
+                {% if form.affected_date_of_birth.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.affected_date_of_birth.errors %}
+                      <i class="fas fa-exclamation-circle"></i> {{ error }}<br>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+              
+              <div class="col-md-4 mb-3">
+                <label for="id_affected_gender">Gender <span class="text-danger">*</span></label>
+                <select name="affected_gender" id="id_affected_gender" class="form-control" required>
+                  <option value="">-- Select Gender --</option>
+                  <option value="MALE">Male</option>
+                  <option value="FEMALE">Female</option>
+                  <option value="OTHER">Other</option>
+                  <option value="PREFER_NOT_TO_SAY">Prefer not to say</option>
+                </select>
+                <small class="form-text text-muted">Select gender</small>
+              </div>
+              
+              <div class="col-md-4 mb-3">
+                <label for="id_affected_age">Age</label>
+                <input type="number" class="form-control readonly-field" id="id_affected_age" name="affected_age" 
+                       placeholder="Calculated automatically" readonly>
+                <small class="form-text text-muted">Age is calculated automatically from date of birth</small>
+              </div>
+            </div>
+
+            <!-- Row 4: Job Title, Date of Joining -->
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="id_affected_job_title">Job Title <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" id="id_affected_job_title" name="affected_job_title" 
+                       placeholder="Enter job title" required maxlength="100">
+                <small class="form-text text-muted">Enter the job title or designation</small>
+              </div>
+              
+              <div class="col-md-6 mb-3">
+                <label for="id_affected_date_of_joining">Date of Joining <span class="text-danger">*</span></label>
+                <input type="date" class="form-control {% if form.affected_date_of_joining.errors %}is-invalid{% endif %}" id="id_affected_date_of_joining" name="affected_date_of_joining" required>
+                <small class="form-text text-muted">Select the date of joining</small>
+                {% if form.affected_date_of_joining.errors %}
+                  <div class="invalid-feedback d-block">
+                    {% for error in form.affected_date_of_joining.errors %}
+                      <i class="fas fa-exclamation-circle"></i> {{ error }}<br>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <!-- ===== END OF NEW AFFECTED PERSON SECTION ===== -->
+
+          <hr>
+
+          <!-- Body Parts Section -->
+          <div id="bodyPartsSection" style="display: none;">
+            {% include 'accidents/body_diagram_interactive.html' %}
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label for="{{ form.nature_of_injury.id_for_label }}">Nature of Injury <span class="text-danger">*</span></label>
+              {{ form.nature_of_injury }}
+              <small class="form-text text-muted">Required: Describe the type and extent of injury (e.g., cut, fracture, burn)</small>
+              {% if form.nature_of_injury.errors %}
+                <div class="text-danger">{{ form.nature_of_injury.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Photo Attachments -->
+          <h5 class="mb-3"><i class="fas fa-camera mr-2"></i>Photo Evidence</h5>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="photos">Upload Photos (if any)</label>
+              <input type="file" class="form-control-file" id="photos" name="photos" multiple accept="image/*">
+              <small class="form-text text-muted">Multiple photos can be selected. Supported formats: JPG, PNG</small>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Reporting Information -->
+          <h5 class="mb-3"><i class="fas fa-user-edit mr-2"></i>Reporting Information</h5>
+          <div class="row">
+              <div class="col-md-6 mb-3">
+                  <label>Reported By</label>
+                  <input type="text" class="form-control" value="{{ user.get_full_name|default:user.username }}" readonly style="background-color: #e9ecef;">
+              </div>
+              <div class="col-md-6 mb-3">
+                  <label>Reported Date</label>
+                  <input type="text" class="form-control" value="{% now 'd/m/Y H:i' %}" readonly style="background-color: #e9ecef;">
+              </div>
+          </div>
+
+          <hr>
+        </div>
+        
+        <div class="card-footer">
+          <button type="submit" class="btn btn-danger btn-lg">
+            <i class="fas fa-paper-plane mr-2"></i>Submit Injury Report
+          </button>
+          <a href="{{ cancel_url }}" class="btn btn-secondary btn-lg ml-2">
+            <i class="fas fa-times mr-2"></i>Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const incidentTypeSelect = document.getElementById('id_incident_type');
+    const bodyPartsSection = document.getElementById('bodyPartsSection');
+    const natureOfInjuryField = document.getElementById('id_nature_of_injury');
+    const form = document.getElementById('incidentForm');
+    let isSubmitting = false;
+    
+    // Age calculation fields
+    const dateOfBirthField = document.getElementById('id_affected_date_of_birth');
+    const ageField = document.getElementById('id_affected_age');
+    
+    // Function to calculate age from date of birth
+    function calculateAge(dateOfBirth) {
+        if (!dateOfBirth) return '';
+        
+        const today = new Date();
+        const birthDate = new Date(dateOfBirth);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        
+        return age >= 0 ? age : '';
+    }
+    
+    // Auto-calculate age when date of birth changes
+    dateOfBirthField.addEventListener('change', function() {
+        const age = calculateAge(this.value);
+        ageField.value = age;
+    });
+    
+    // Show/hide sections based on incident type
+    incidentTypeSelect.addEventListener('change', function() {
+        const selectedType = this.value;
+        
+        if (!selectedType) {
+            bodyPartsSection.style.display = 'none';
+            natureOfInjuryField.removeAttribute('required');
+            return;
+        }
+        
+        // Get the code from the selected option's data attribute
+        const selectedOption = this.options[this.selectedIndex];
+        const selectedCode = selectedOption.getAttribute('data-code');
+        
+        // Check if it's an injury-related incident type
+        const injuryTypes = ['LTI', 'MTC', 'FA', 'HLFI', 'FATALITY'];
+        const isInjuryType = injuryTypes.includes(selectedCode);
+        
+        if (isInjuryType) {
+            bodyPartsSection.style.display = 'block';
+            natureOfInjuryField.setAttribute('required', 'required');
+        } else {
+            bodyPartsSection.style.display = 'none';
+            natureOfInjuryField.removeAttribute('required');
+        }
+    });
+
+    // Unsafe Acts - Show/hide "Other" explanation box
+    const unsafeActOtherCheckbox = document.getElementById('ua13');
+    const unsafeActsOtherBox = document.getElementById('unsafeActsOtherBox');
+    
+    unsafeActOtherCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            unsafeActsOtherBox.classList.add('show');
+        } else {
+            unsafeActsOtherBox.classList.remove('show');
+            document.getElementById('unsafe_acts_other').value = '';
+        }
+    });
+    
+    // Unsafe Conditions - Show/hide "Other" explanation box
+    const unsafeConditionOtherCheckbox = document.getElementById('uc14');
+    const unsafeConditionsOtherBox = document.getElementById('unsafeConditionsOtherBox');
+    
+    unsafeConditionOtherCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            unsafeConditionsOtherBox.classList.add('show');
+        } else {
+            unsafeConditionsOtherBox.classList.remove('show');
+            document.getElementById('unsafe_conditions_other').value = '';
+        }
+    });
+   
+    // Form submission
+    document.getElementById('incidentForm').addEventListener('submit', function(e) {
+        // Validate nature of injury if incident type requires it
+        const selectedType = incidentTypeSelect.value;
+        if (!selectedType) {
+        e.preventDefault();
+        alert('Please select an incident type.');
+        incidentTypeSelect.focus();
+        return false;
+    }
+      const selectedOption = incidentTypeSelect.options[incidentTypeSelect.selectedIndex];
+      const selectedCode = selectedOption.getAttribute('data-code');
+      
+      // Check if it's an injury-related incident type
+      const injuryTypes = ['LTI', 'MTC', 'FA', 'HLFI', 'FATALITY'];
+      const isInjuryType = injuryTypes.includes(selectedCode);
+      
+      if (isInjuryType && !natureOfInjuryField.value.trim()) {
+          e.preventDefault();
+          alert('Nature of Injury is required for this type of incident.');
+          natureOfInjuryField.focus();
+          return false;
+      }
+        // Validate affected person details
+        const affectedName = document.getElementById('id_affected_person_name').value.trim();
+        const affectedEmployeeId = document.getElementById('id_affected_person_employee_id').value.trim();
+        const affectedDepartment = document.getElementById('id_affected_person_department').value.trim();
+        
+        if (!affectedName || !affectedEmployeeId || !affectedDepartment) {
+            e.preventDefault();
+            alert('Please fill in all required affected person details (Name, Employee ID, Department).');
+            return false;
+        }
+        
+        // Validate age is calculated
+        if (!ageField.value) {
+            e.preventDefault();
+            alert('Please select a valid Date of Birth to calculate age.');
+            dateOfBirthField.focus();
+            return false;
+        }
+        
+        // Save body parts as JSON
+        const bodyPartsInput = document.getElementById('affectedBodyPartsJson');
+        if (window.selectedBodyParts && window.selectedBodyParts.size > 0) {
+            bodyPartsInput.value = JSON.stringify(Array.from(window.selectedBodyParts));
+        } else {
+            bodyPartsInput.value = '[]';
+        }
+        
+        // Save unsafe acts as JSON
+        const unsafeActs = [];
+        document.querySelectorAll('.unsafe-act-checkbox:checked').forEach(checkbox => {
+            unsafeActs.push(checkbox.value);
+        });
+        document.getElementById('unsafeActsJson').value = JSON.stringify(unsafeActs);
+        
+        // Save unsafe conditions as JSON
+        const unsafeConditions = [];
+        document.querySelectorAll('.unsafe-condition-checkbox:checked').forEach(checkbox => {
+            unsafeConditions.push(checkbox.value);
+        });
+        document.getElementById('unsafeConditionsJson').value = JSON.stringify(unsafeConditions);
+        // To prevent multiple submit
+        if (isSubmitting) {
+            e.preventDefault();
+            return false;
+        }
+        isSubmitting = true;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
+        }
+    });
+    
+    // Optional: Set current date and time as default (user can change)
+    const now = new Date();
+    const dateInput = document.getElementById('id_incident_date');
+    const timeInput = document.getElementById('id_incident_time');
+    
+    // Only set if fields are empty (for new forms)
+    if (dateInput && !dateInput.value) {
+        dateInput.value = now.toISOString().split('T')[0];
+    }
+    if (timeInput && !timeInput.value) {
+        timeInput.value = now.toTimeString().split(' ')[0].substring(0, 5);
+    }
+
+
+    const plantSelect = document.getElementById('id_plant');
+    const zoneSelect = document.getElementById('id_zone');
+    const locationSelect = document.getElementById('id_location');
+    const sublocationSelect = document.getElementById('id_sublocation');
+
+    function resetSelect(selectElement, defaultText) {
+        selectElement.innerHTML = `<option value="">-- ${defaultText} --</option>`;
+    }
+
+    if (plantSelect) {
+        plantSelect.addEventListener('change', function() {
+            const plantId = this.value;
+            
+            // Reset all child dropdowns
+            resetSelect(zoneSelect, 'Select Zone');
+            resetSelect(locationSelect, 'Select Zone First');
+            resetSelect(sublocationSelect, 'Select Location First');
+
+            if (plantId) {
+                // Fetch zones for the selected plant
+                fetch(`{% url 'accidents:ajax_get_zones' %}?plant_id=${plantId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(zone => {
+                            const option = new Option(`${zone.name} (${zone.code})`, zone.id);
+                            zoneSelect.add(option);
+                        });
+                    })
+                    .catch(error => console.error('Error loading zones:', error));
+            }
+        });
+    }
+
+    if (zoneSelect) {
+        zoneSelect.addEventListener('change', function() {
+            const zoneId = this.value;
+
+            // Reset child dropdowns
+            resetSelect(locationSelect, 'Select Location');
+            resetSelect(sublocationSelect, 'Select Location First');
+            
+            if (zoneId) {
+                fetch(`{% url 'accidents:ajax_get_locations' %}?zone_id=${zoneId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(location => {
+                            const option = new Option(`${location.name} (${location.code})`, location.id);
+                            locationSelect.add(option);
+                        });
+                    })
+                    .catch(error => console.error('Error loading locations:', error));
+            }
+        });
+    }
+    
+    if (locationSelect) {
+        locationSelect.addEventListener('change', function() {
+            const locationId = this.value;
+
+            resetSelect(sublocationSelect, 'Select Sub-Location');
+
+            if (locationId) {
+                fetch(`{% url 'accidents:ajax_get_sublocations' %}?location_id=${locationId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(sublocation => {
+                            const option = new Option(sublocation.code ? `${sublocation.name} (${sublocation.code})` : sublocation.name, sublocation.id);
+                            sublocationSelect.add(option);
+                        });
+                    })
+                    .catch(error => console.error('Error loading sub-locations:', error));
+            }
+        });
+    }
+
+    // --- Trigger change event on page load if a plant is pre-selected (single-assignment case) ---
+    // This will auto-load the next dropdowns when the page first loads.
+    if (plantSelect && plantSelect.value) {
+        plantSelect.dispatchEvent(new Event('change'));
+        // We need a small delay for the AJAX to complete before triggering the next one
+        setTimeout(() => {
+            if(zoneSelect && zoneSelect.value) {
+                zoneSelect.dispatchEvent(new Event('change'));
+                setTimeout(() => {
+                    if(locationSelect && locationSelect.value) {
+                        locationSelect.dispatchEvent(new Event('change'));
+                    }
+                }, 200); // delay for location to load
+            }
+        }, 200); // delay for zone to load
+    }
+});
+
+
+</script>
+{% endblock %}

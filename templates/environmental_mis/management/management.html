@@ -1,0 +1,245 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Environmental Dashboard{% endblock %}
+{% block page_title %}Environmental Dashboard{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Hazard Management</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="card card-primary">
+        <div class="card-header">
+            <h3 class="card-title">Environmental MIS - Monthly Entry</h3>
+        </div>
+
+        <div class="card-body">
+
+            <!-- FILTER SECTION -->
+            <div class="row">
+
+                <div class="col-md-2">
+                    <label>Plant</label>
+                    <select id="plant" class="form-control">
+                        <option value="">Select Plant</option>
+                        {% for plant in plants %}
+                            <option value="{{ plant.id }}">{{ plant.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label>Year</label>
+                    <input type="number" id="year" class="form-control" value="{{ now|date:'Y' }}">
+                </div>
+
+                <div class="col-md-2">
+                    <label>Month</label>
+                    <select id="month" class="form-control">
+                        <option value="">Select Month</option>
+                        <option value="JAN">January</option>
+                        <option value="FEB">February</option>
+                        <option value="MAR">March</option>
+                        <option value="APR">April</option>
+                        <option value="MAY">May</option>
+                        <option value="JUN">June</option>
+                        <option value="JUL">July</option>
+                        <option value="AUG">August</option>
+                        <option value="SEP">September</option>
+                        <option value="OCT">October</option>
+                        <option value="NOV">November</option>
+                        <option value="DEC">December</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label>Business Type</label>
+                    <select id="business_type" class="form-control">
+                        <option value="">Select Business Type</option>
+                        {% for bt in business_types %}
+                            <option value="{{ bt.id }}">{{ bt.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label>Domain</label>
+                    <select id="domain" class="form-control">
+                        <option value="">Select Domain</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <hr>
+
+            <!-- GRID TABLE -->
+            <form id="monthlyForm">
+                {% csrf_token %}
+                <input type="hidden" name="plant" id="hidden_plant">
+                <input type="hidden" name="year" id="hidden_year">
+                <input type="hidden" name="month" id="hidden_month">
+                <input type="hidden" name="business_type" id="hidden_bt">
+                <input type="hidden" name="domain" id="hidden_domain">
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm" id="dataTable">
+                        <thead id="tableHead"></thead>
+                        <tbody id="tableBody"></tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-warning mt-2" id="lockBtn">
+                    Lock / Unlock Month
+                </button>
+
+                <button type="button" class="btn btn-success mt-2" id="saveBtn">
+                    Save Data
+                </button>
+            </form>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+
+let currentDomainType = null;
+
+// Load Domains
+$("#business_type").change(function() {
+
+    let bt = $(this).val();
+
+    $("#domain").html('<option value="">Select Domain</option>');
+
+    if(!bt) return;
+
+    $.get("{% url 'get_domains' %}", { business_type: bt }, function(response){
+
+        response.data.forEach(function(d){
+            $("#domain").append(
+                `<option value="${d.id}" data-type="${d.type}">
+                    ${d.name}
+                </option>`
+            );
+        });
+
+    });
+
+});
+
+// Load Subcategories + Build Grid
+$("#domain").change(function(){
+
+    let domain = $(this).val();
+    currentDomainType = $("#domain option:selected").data("type");
+
+    if(!domain) return;
+
+    $.get("{% url 'get_subcategories' %}", { domain: domain }, function(response){
+        console.log(response.data);
+        buildTable(response.data);
+
+    });
+
+});
+
+
+function buildTable(data){
+
+    let head = `
+        <tr>
+            <th>Category</th>
+            <th>Sub Category</th>
+            <th>Unit</th>
+            <th>Value</th>
+        </tr>
+    `;
+
+    let body = "";
+
+    data.forEach(function(row){
+
+        console.log(row);  // DEBUG — check keys
+
+        body += `
+            <tr>
+                <td>${row["category__name"] || ""}</td>
+                <td>
+                    ${row.name}
+                    <input type="hidden" name="subcategory_ids[]" value="${row.id}">
+                </td>
+                <td>${row["unit__name"] || ""}</td>
+                <td>
+                    <input type="number"
+                           step="0.0001"
+                           name="value_${row.id}"
+                           class="form-control form-control-sm">
+                </td>
+            </tr>
+        `;
+    });
+
+    $("#tableHead").html(head);
+    $("#tableBody").html(body);
+}
+
+// SAVE DATA
+$("#saveBtn").click(function(){
+
+    $("#hidden_plant").val($("#plant").val());
+    $("#hidden_year").val($("#year").val());
+    $("#hidden_month").val($("#month").val());
+    $("#hidden_bt").val($("#business_type").val());
+    $("#hidden_domain").val($("#domain").val());
+
+    let formData = $("#monthlyForm").serialize();
+
+    $.post("{% url 'save_monthly_data' %}", formData, function(response){
+
+        if(response.success){
+            alert("Data saved successfully.");
+        }
+
+    }).fail(function(xhr){
+        alert("Error: " + xhr.responseJSON.error);
+    });
+
+});
+
+
+$("#lockBtn").click(function(){
+
+    let data = {
+        plant: $("#plant").val(),
+        business_type: $("#business_type").val(),
+        domain: $("#domain").val(),
+        year: $("#year").val(),
+        month: $("#month").val(),
+        csrfmiddlewaretoken: $("input[name=csrfmiddlewaretoken]").val()
+    };
+
+    $.post("{% url 'toggle_month_lock' %}", data, function(response){
+
+        if(response.locked){
+            alert("Month Locked Successfully.");
+        } else {
+            alert("Month Unlocked.");
+        }
+
+    });
+
+});
+
+</script>
+
+{% endblock %}

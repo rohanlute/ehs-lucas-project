@@ -1,0 +1,717 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Environmental Data Entry{% endblock %}
+{% block page_title %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Enviromental Data Entry</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ==================== ROOT VARIABLES ==================== */
+:root {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --success-color: #10b981;
+    --success-hover: #059669;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --info-color: #3b82f6;
+    --bg-light: #f8fafc;
+    --bg-white: #ffffff;
+    --border-color: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+}
+
+/* ==================== CONTAINER ==================== */
+.env-data-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    background: var(--bg-light);
+    min-height: calc(100vh - 100px);
+}
+
+/* ==================== HEADER SECTION ==================== */
+.header-section {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-lg);
+    color: white;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.header-info h2 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: white;
+}
+
+.plant-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    font-size: 0.95rem;
+    opacity: 0.95;
+}
+
+.plant-info strong {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+}
+
+.btn-manage-questions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    color: var(--primary-color);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-manage-questions:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    background: #f9fafb;
+}
+
+.btn-manage-questions i {
+    font-size: 1.1rem;
+}
+
+/* ==================== PLANT SELECTOR ==================== */
+.plant-selector-section {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.plant-selector-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.plant-selector-container label {
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.plant-selector-container label i {
+    color: var(--primary-color);
+    font-size: 1.1rem;
+}
+
+.plant-selector-container select {
+    flex: 1;
+    min-width: 250px;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.plant-selector-container select:hover {
+    border-color: var(--primary-color);
+}
+
+.plant-selector-container select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.plant-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+}
+
+.plant-count-badge i {
+    font-size: 1rem;
+}
+
+/* ==================== NO QUESTIONS ALERT ==================== */
+.no-questions-alert {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid var(--warning-color);
+    border-radius: var(--radius-lg);
+    padding: 3rem;
+    text-align: center;
+    box-shadow: var(--shadow-md);
+}
+
+.no-questions-alert h3 {
+    color: #92400e;
+    margin-bottom: 1.5rem;
+    font-size: 1.5rem;
+}
+
+.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    background: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover {
+    background: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+/* ==================== DATA TABLE CONTAINER ==================== */
+.data-table-container {
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border-color);
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 1.5rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+/* ==================== DATA TABLE ==================== */
+.data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.9rem;
+    background: white;
+}
+
+.data-table thead {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.data-table thead th {
+    padding: 1rem;
+    font-weight: 700;
+    text-align: left;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.data-table thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+    min-width: 350px;
+    max-width: 450px;
+}
+
+.data-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.data-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.data-table tbody td {
+    padding: 0.75rem 1rem;
+    border-right: 1px solid #f1f5f9;
+}
+
+.data-table tbody td:first-child {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 5;
+    font-weight: 600;
+    color: var(--text-primary);
+    border-right: 2px solid var(--border-color);
+    min-width: 350px;
+    max-width: 450px;
+}
+
+.data-table tbody tr:hover td:first-child {
+    background: #f8fafc;
+}
+
+.data-table tbody td:last-child {
+    border-right: none;
+}
+
+/* ==================== INPUT CELL CONTAINER ==================== */
+.input-cell-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* ==================== UNIT BADGE ==================== */
+.unit-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    color: #1e40af;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+    border: 1px solid #93c5fd;
+}
+
+/* ==================== AUTO INDICATOR ==================== */
+.data-table tbody td:first-child i.fas.fa-calculator {
+    margin-left: 0.5rem;
+    color: var(--success-color);
+    font-size: 0.875rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* ==================== DATA INPUT ==================== */
+.data-input {
+    flex: 1;
+    min-width: 80px;
+    padding: 0.5rem 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    text-align: right;
+    transition: all 0.2s ease;
+    background: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.data-input:hover {
+    border-color: #cbd5e1;
+}
+
+.data-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    background: #fefefe;
+}
+
+.data-input::placeholder {
+    color: #cbd5e1;
+    font-style: italic;
+}
+
+/* ==================== UNIT SELECT ==================== */
+.unit-select {
+    padding: 0.5rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.8rem;
+    color: var(--text-primary);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 70px;
+}
+
+.unit-select:hover {
+    border-color: #cbd5e1;
+}
+
+.unit-select:focus {
+    outline: none;
+    border-color: var(--info-color);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ==================== ACTION BUTTONS ==================== */
+.action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--border-color);
+}
+
+.btn-reset,
+.btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-reset {
+    background: #f1f5f9;
+    color: var(--text-secondary);
+    border: 2px solid var(--border-color);
+}
+
+.btn-reset:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-save {
+    background: linear-gradient(135deg, var(--success-color) 0%, var(--success-hover) 100%);
+    color: white;
+    border: 2px solid transparent;
+}
+
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);
+}
+
+.btn-save:active {
+    transform: translateY(0);
+}
+
+/* ==================== RESPONSIVE DESIGN ==================== */
+@media (max-width: 1024px) {
+    .env-data-container {
+        padding: 1rem;
+    }
+
+    .header-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .plant-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .data-table {
+        font-size: 0.85rem;
+    }
+
+    .data-table thead th,
+    .data-table tbody td {
+        padding: 0.5rem;
+    }
+
+    .data-table thead th:first-child,
+    .data-table tbody td:first-child {
+        min-width: 200px;
+    }
+}
+
+@media (max-width: 768px) {
+    .header-info h2 {
+        font-size: 1.5rem;
+    }
+
+    .plant-selector-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .plant-selector-container select {
+        min-width: 100%;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+    }
+
+    .btn-reset,
+    .btn-save {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .data-table thead th:first-child,
+    .data-table tbody td:first-child {
+        position: static;
+        min-width: auto;
+    }
+
+    .input-cell-container {
+        flex-direction: column;
+    }
+
+    .unit-select {
+        width: 100%;
+    }
+}
+
+/* ==================== LOADING STATE ==================== */
+.btn-save:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* ==================== PRINT STYLES ==================== */
+@media print {
+    .header-section,
+    .plant-selector-section,
+    .action-buttons,
+    .btn-manage-questions {
+        display: none;
+    }
+
+    .data-table-container {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+
+    .data-input,
+    .unit-select {
+        border: none;
+        border-bottom: 1px solid #000;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="env-data-container">
+
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-info">
+                <h2><i class="fas fa-leaf"></i> Monthly Environmental Data Entry</h2>
+                <div class="plant-info">
+                    <span><strong>Currently Editing:</strong> {{ selected_plant.name }}</span>
+                    <span><strong>Year:</strong> {{ current_year }}</span>
+                    <span><strong>Last Updated:</strong> {% now "F d, Y - H:i" %}</span>
+                </div>
+            </div>
+            {% if user.is_superuser or user.is_staff or user.is_admin_user %}
+            <div>
+                <a href="{% url 'environmental:questions-manager' %}" class="btn-manage-questions">
+                    <i class="fas fa-cog"></i>
+                    <span>Manage Questions</span>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Plant Selector -->
+    {% if user_plants.count > 1 %}
+    <div class="plant-selector-section">
+        <div class="plant-selector-container">
+            <label>
+                <i class="fas fa-building"></i>
+                <span>Select Plant:</span>
+            </label>
+            <select onchange="switchPlant(this.value)">
+                {% for plant in user_plants %}
+                <option value="{{ plant.id }}" {% if plant.id == selected_plant.id %}selected{% endif %}>
+                    {{ plant.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <span class="plant-count-badge">
+                <i class="fas fa-check-circle"></i>
+                <span>{{ user_plants.count }} plant(s)</span>
+            </span>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if no_questions %}
+        <div class="no-questions-alert">
+            <h3><i class="fas fa-exclamation-triangle"></i> No Environmental Questions Configured</h3>
+            <p style="margin-bottom: 1.5rem; color: #92400e;">Please add questions to start collecting environmental data.</p>
+            <a href="{% url 'environmental:questions-manager' %}" class="btn-primary">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add Questions</span>
+            </a>
+        </div>
+    {% else %}
+
+    <!-- Data Entry Form -->
+    <form method="post" id="dataEntryForm">
+        {% csrf_token %}
+        <input type="hidden" name="selected_plant_id" value="{{ selected_plant.id }}">
+
+        <div class="data-table-container">
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Environmental Indicators</th>
+                            {% for month_code, month_name in months %}
+                                <th>{{ month_name }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for q in questions_with_data %}
+                        <tr>
+                            <td>
+                                <span>{{ forloop.counter }}. {{ q.question }}</span>
+                                <span class="unit-badge">{{ q.default_unit_name }}</span>
+                                {% if q.is_auto_populated %}
+                                    <i class="fas fa-calculator" title="Auto-calculated from {{ q.source_type }}"></i>
+                                {% endif %}
+                            </td>
+                            {% for m in q.months %}
+                            <td>
+                                <div class="input-cell-container">
+                                <input
+                                    type="text"
+                                    name="{{ q.slugified }}_{{ m.code|lower }}"
+                                    value="{{ m.value }}"
+                                    class="data-input"
+                                    placeholder="0"
+                                    pattern="[0-9]*\.?[0-9]*"
+                                    title="Enter numeric value"
+                                    {% if q.is_auto_populated %}readonly style="background: #f0f9ff;"{% endif %}
+                                >
+                                {% if q.available_units|length > 1 and not q.is_auto_populated %}
+                                <select class="unit-select" name="{{ q.slugified }}_{{ m.code|lower }}_unit">
+                                    {% for unit in q.available_units %}
+                                    <option value="{{ unit.id }}" {% if unit.id == m.saved_unit_id %}selected{% endif %}>
+                                        {{ unit.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                {% endif %}
+                            </div>
+
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Actions -->
+            <div class="action-buttons">
+                <button type="button" class="btn-reset" onclick="resetForm()">
+                    <i class="fas fa-undo"></i>
+                    <span>Reset</span>
+                </button>
+                <button type="submit" class="btn-save" id="saveBtn">
+                    <i class="fas fa-save"></i>
+                    <span>Save Data for {{ selected_plant.name }}</span>
+                </button>
+            </div>
+        </div>
+    </form>
+    {% endif %}
+</div>
+
+<script>
+function switchPlant(plantId) {
+    if (confirm("Switch plant? Any unsaved data will be lost.")) {
+        window.location.href = "?plant_id=" + plantId;
+    }
+}
+
+function resetForm() {
+    if (confirm("Reset all changes? This will reload the page and discard unsaved data.")) {
+        location.reload();
+    }
+}
+
+// Form submission handling
+document.getElementById('dataEntryForm')?.addEventListener('submit', function(e) {
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Saving...</span>';
+});
+
+// Auto-save warning on page leave
+let formChanged = false;
+document.getElementById('dataEntryForm')?.addEventListener('input', function() {
+    formChanged = true;
+});
+
+window.addEventListener('beforeunload', function(e) {
+    if (formChanged) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+</script>
+
+{% endblock %}

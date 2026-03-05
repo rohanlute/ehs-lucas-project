@@ -1,0 +1,179 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Role List{% endblock %}
+{% block page_title %}Role List{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Role List</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .breadcrumb {
+    font-size: 14px;
+    color: #4f6df5;
+    margin-bottom: 18px;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 15px;
+  }
+
+  .search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .search-box input {
+    padding: 10px 18px;
+    width: 260px;
+    border-radius: 20px;
+    border: 1px solid #cdebd6;
+    outline: none;
+  }
+
+  .search-btn {
+    background: #0d6efd;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+  }
+
+  .create-btn {
+    padding: 10px 22px;
+    border-radius: 22px;
+    font-weight: 600;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    padding: 20px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    background: #f9fafb;
+    padding: 14px 12px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  tbody td {
+    padding: 14px 12px;
+    font-size: 14px;
+  }
+
+  .role-name {
+    font-weight: 600;
+  }
+
+  .role-desc {
+    color: #6b7280;
+    max-width: 320px;
+  }
+
+  .badges {
+    background: #e8f1ff;
+    color: #2f6fed;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .actions i {
+    cursor: pointer;
+    margin: 0 6px;
+    padding: 8px;
+    font-size: 16px;
+  }
+
+  .edit {
+    color: #0d6efd;
+  }
+</style>
+{% endblock extra_css %}
+
+{% block content %}
+
+<div class="header">
+  <form method="get" class="search-box">
+    <input
+      type="text"
+      name="search"
+      placeholder="Search roles..."
+      value="{{ search_query|default:'' }}"
+    >
+    <button type="submit" class="search-btn">Search</button>
+  </form>
+
+  <a href="{% url 'accounts:createrole' %}" class="btn btn-primary create-btn">
+    ➕ Create Role
+  </a>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Role Name</th>
+        <th>Description</th>
+        <th>Permissions</th>
+        <th class="center">Actions</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for role in roles %}
+        <tr>
+          <td>
+            <div class="role-name">{{ role.name }}</div>
+          </td>
+
+          <td>
+            <div class="role-desc">
+              {{ role.description|default:"—" }}
+            </div>
+          </td>
+
+          <td>
+            <span class="badges">
+              {{ role.permissions.count }} Permissions
+            </span>
+          </td>
+
+          <td class="center">
+            <div class="actions">
+              <a href="{% url 'accounts:updaterole' role.id %}" title="Edit Role">
+                <i class="bi bi-pencil-square edit"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4" style="text-align:center; padding:30px; color:#888;">
+            No roles found
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock content %}

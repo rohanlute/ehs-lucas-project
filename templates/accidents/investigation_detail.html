@@ -1,0 +1,409 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load permission_tags %}
+
+{% block title %}Investigation Report - {{ investigation.incident.report_number }}{% endblock %}
+{% block page_title %}Investigation Report - {{ investigation.incident.report_number }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accidents:incident_list' %}">Incident List</a></li>
+<li class="breadcrumb-item active">Investigation Report</li>
+{% endblock %}
+{% block extra_css %}
+<style>
+.content-header h1 {
+    font-size: 1.6rem !important; 
+}
+.action-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.action-footer .left-actions,
+.action-footer .right-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.action-footer form {
+    margin: 0;
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            
+            <!-- Header -->
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h3 class="card-title">
+                        <i class="fas fa-search mr-2"></i>Investigation Report
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-8">
+                            <h4 class="mb-1 font-weight-bold">{{ incident.report_number }} - {{ incident.incident_title|default:"Incident Report" }}</h4>
+                            <div class="d-flex flex-wrap">
+                                <span class="badge badge-dark mr-2 mb-1">{{ incident.incident_type.name }}</span>
+                                <span class="badge badge-info mr-2 mb-1">Status: {{ incident.get_status_display }}</span>
+                                {% if incident.incident_type == 'LTI' %}
+                                    <span class="badge badge-danger mb-1">High Severity</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-right mt-2 mt-md-0">
+                            <small class="text-muted d-block">Reported On: <strong>{{ incident.reported_date|date:"d M Y H:i" }}</strong></small>
+                        </div>
+                    </div>
+
+                    <div class="row bg-light p-3 rounded mx-0">
+                        <div class="col-sm-6 col-md-3 border-right mb-2 mb-md-0">
+                            <small class="text-muted d-block">Injury Date & Time</small>
+                            <span class="font-weight-bold">{{ incident.incident_date|date:"d M Y" }} | {{ incident.incident_time|time:"H:i" }}</span>
+                        </div>
+                        <div class="col-sm-6 col-md-3 border-right mb-2 mb-md-0">
+                            <small class="text-muted d-block">Location / Plant</small>
+                            <span class="font-weight-bold">{{ incident.plant.name }} - {{ incident.location.name }}</span>
+                        </div>
+                        <div class="col-sm-6 col-md-3 border-right mb-2 mb-md-0">
+                            <small class="text-muted d-block">Affected Person</small>
+                            <span class="font-weight-bold text-primary">{{ incident.affected_person_name }}</span>
+                        </div>
+                        <div class="col-sm-6 col-md-3">
+                            <small class="text-muted d-block">Department</small>
+                            <span class="font-weight-bold">{{ incident.affected_person_department.name|default:"N/A" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Investigation Details -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clipboard-list mr-2"></i>Investigation Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Investigation Date:</label>
+                            <p class="font-weight-bold">{{ investigation.investigation_date|date:"d M Y" }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Lead Investigator:</label>
+                            <p class="font-weight-bold">{{ investigation.investigator.get_full_name }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="text-muted">Investigation Team Members Emails:</label>
+                            <p>{{ investigation.investigation_team }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Approval Status Alert Box -->
+            {% with incident=investigation.incident %}
+                {% if incident.approval_status == 'PENDING' %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-clock mr-2"></i>
+                    <strong>Status:</strong> This investigation report is currently pending approval.
+                </div>
+                {% elif incident.approval_status == 'APPROVED' %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle mr-2"></i>
+                    <strong>Status:</strong> Approved by <strong>{{ incident.approved_by.get_full_name }}</strong> on {{ incident.approved_date|date:"d M Y" }}.
+                </div>
+                {% elif incident.approval_status == 'REJECTED' %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-times-circle mr-2"></i>
+                    <strong>Status:</strong> This report has been rejected.
+                    <p class="mb-0 mt-2"><strong>Remarks:</strong> {{ incident.rejection_remarks|linebreaks }}</p>
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            <!-- Findings -->
+            <div class="card mt-3">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Findings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Sequence of Events:</strong></label>
+                            <div class="border-left border-danger pl-3">
+                                <p>{{ investigation.sequence_of_events|linebreaks }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Root Cause Analysis:</strong></label>
+                            <div class="border-left border-danger pl-3">
+                                <p>{{ investigation.root_cause_analysis|linebreaks }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Contributing Factors:</strong></label>
+                            <div class="border-left border-warning pl-3">
+                                <p>{{ investigation.contributing_factors|linebreaks }}</p>
+                            </div>
+                        </div>
+                    </div> -->
+
+                    {% if investigation.personal_factors %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Personal Factors:</strong></label>
+                            <div class="pl-3">
+                                {% for factor in investigation.personal_factors %}
+                                <span class="badge badge-warning mr-1 mb-1">{{ factor }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if investigation.job_factors %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Job Factors:</strong></label>
+                            <div class="pl-3">
+                                {% for factor in investigation.job_factors %}
+                                <span class="badge badge-info mr-1 mb-1">{{ factor }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- {% if investigation.unsafe_conditions_identified %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Unsafe Conditions Identified:</strong></label>
+                            <p>{{ investigation.unsafe_conditions_identified|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if investigation.unsafe_acts_identified %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Unsafe Acts Identified:</strong></label>
+                            <p>{{ investigation.unsafe_acts_identified|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %} -->
+                </div>
+            </div>
+
+            <!-- Evidence -->
+            {% if investigation.evidence_collected or investigation.witness_statements %}
+            <div class="card mt-3">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-alt mr-2"></i>Evidence & Statements
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if investigation.evidence_collected %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Evidence Collected:</strong></label>
+                            <p>{{ investigation.evidence_collected|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if investigation.witness_statements %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Witness Statements:</strong></label>
+                            <p>{{ investigation.witness_statements|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recommendations -->
+            <div class="card mt-3">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lightbulb mr-2"></i>Recommendations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Immediate Corrective Actions:</strong></label>
+                            <div class="border-left border-success pl-3">
+                                <p>{{ investigation.immediate_corrective_actions|linebreaks }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Preventive Measures:</strong></label>
+                            <div class="border-left border-success pl-3">
+                                <p>{{ investigation.preventive_measures|linebreaks }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- {% if investigation.long_term_recommendations %}
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="text-muted"><strong>Long-term Recommendations:</strong></label>
+                            <div class="border-left border-primary pl-3">
+                                <p>{{ investigation.long_term_recommendations|linebreaks }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %} -->
+                </div>
+            </div>
+
+            <!-- Action Items -->
+            <div class="card mt-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tasks mr-2"></i>Action Plan
+                    </h5>
+                </div>
+
+                <div class="card-body">
+
+                    {% if investigation.incident.action_items.exists %}
+                        {% for action in investigation.incident.action_items.all %}
+                            <div class="border rounded p-3 mb-3">
+
+                                <p>
+                                    <strong>Action:</strong><br>
+                                    {{ action.action_description|linebreaks }}
+                                </p>
+
+                                <p>
+                                    <strong>Target Completion Date:</strong><br>
+                                    {{ action.target_date|date:"d M Y" }}
+                                </p>
+
+                                <p>
+                                    <strong>Status:</strong>
+                                    <span class="badge 
+                                        {% if action.status == 'COMPLETED' %}badge-success
+                                        {% elif action.is_overdue %}badge-danger
+                                        {% else %}badge-warning{% endif %}">
+                                        {{ action.get_status_display }}
+                                    </span>
+                                </p>
+
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted font-italic">
+                            No action items defined.
+                        </p>
+                    {% endif %}
+
+                </div>
+            </div>
+
+
+            <!-- Sign-off -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-pen mr-2"></i>Sign-off
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Completed By:</label>
+                            <p class="font-weight-bold">{{ investigation.completed_by.get_full_name }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Completed Date:</label>
+                            <p class="font-weight-bold">{{ investigation.completed_date|date:"d M Y" }}</p>
+                        </div>
+                    </div>
+
+                    {% if investigation.reviewed_by %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Reviewed By:</label>
+                            <p class="font-weight-bold">{{ investigation.reviewed_by.get_full_name }}</p>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="text-muted">Reviewed Date:</label>
+                            <p class="font-weight-bold">{{ investigation.reviewed_date|date:"d M Y" }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card mt-3">
+                <div class="card-footer">
+                    <div class="action-footer">
+
+                        <!-- Left actions -->
+                        <div class="left-actions">
+                            <a href="{{ cancel_url }}"
+                               class="btn btn-primary">
+                                <i class="fas fa-arrow-left mr-1"></i> Back to Incident
+                            </a>
+                        </div>
+
+                        <!-- Right actions -->
+                        <div class="right-actions">
+                            {% if incident.status == 'CLOSED' %}
+                                {% if user|has_perm:'CLOSE_INCIDENT' %}
+                                    <form method="POST"
+                                          action="{% url 'accidents:incident_reopen' incident.pk %}">
+                                        {% csrf_token %}
+                                        <button type="submit"
+                                                class="btn btn-warning"
+                                                onclick="return confirm('Are you sure you want to reopen this incident?')">
+                                            <i class="fas fa-redo mr-1"></i> Reopen Incident
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% else %}
+                                {% if user|has_perm:'CLOSE_INCIDENT' %}
+                                    <a href="{% url 'accidents:incident_closure_check' incident.pk %}"
+                                       class="btn btn-success">
+                                        <i class="fas fa-check-circle mr-1"></i> Close Injury
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

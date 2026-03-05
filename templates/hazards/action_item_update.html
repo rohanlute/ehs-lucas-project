@@ -1,0 +1,288 @@
+<!-- templates/hazards/action_item_update.html -->
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Update Action Item{% endblock %}
+{% block page_title %}Update Action Item {{ hazard.report_number }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'hazards:dashboard' %}">Hazard Management</a></li>
+<li class="breadcrumb-item"><a href="{% url 'hazards:hazard_list' %}">All Hazards</a></li>
+<li class="breadcrumb-item">Update Action Item</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .email-tags-input {
+        min-height: 60px;
+        padding: 8px;
+        border: 2px solid #ced4da;
+        border-radius: 0.25rem;
+        cursor: text;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        align-items: center;
+    }
+    
+    .email-tag {
+        background-color: #007bff;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        font-size: 14px;
+    }
+    
+    .email-tag .remove-tag {
+        margin-left: 8px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    
+    .email-input-field {
+        border: none;
+        outline: none;
+        flex: 1;
+        min-width: 200px;
+        padding: 5px;
+    }
+    
+    .self-assigned-badge {
+        background-color: #28a745;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% comment %} <section class="content-header">
+    <div class="container-fluid">
+        <h1><i class="fas fa-edit"></i> Update Action Item</h1>
+    </div>
+</section> {% endcomment %}
+
+<section class="content">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} alert-dismissible fade show">
+                {{ message|safe }}
+                <button type="button" class="close" data-dismiss="alert">&times;</button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h3 class="card-title text-white">Edit Action Item</h3>
+                </div>
+                <div class="card-body">
+                    <!-- 🔹 enctype added for file upload -->
+                    <form method="POST" id="actionItemForm" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Action Description -->
+                        <div class="form-group">
+                            <label>Action Taken *</label>
+                            <textarea name="action_description" class="form-control" rows="4" required>{{ object.action_description }}</textarea>
+                        </div>
+
+                        <!-- Self Assigned Check -->
+                        {% if object.get_emails_count == 1 and user.email in object.responsible_emails %}
+                        <div class="self-assigned-badge">
+                            <i class="fas fa-user-check"></i> <strong>Self-Assigned Action</strong><br>
+                            <small>Assigned to: {{ user.email }}</small>
+                        </div>
+                        <input type="hidden" name="responsible_emails" value="{{ object.responsible_emails }}">
+                        <input type="hidden" name="is_self_assigned" value="true">
+                        {% else %}
+                        <div class="form-group">
+                            <label><i class="fas fa-envelope"></i> Assigned To (Emails) *</label>
+                            <div class="email-tags-input" id="emailTagsContainer">
+                                <input type="text" class="email-input-field" id="emailInput"
+                                       placeholder="Type email and press Enter...">
+                            </div>
+                            <div class="email-count" id="emailCount"></div>
+                            <input type="hidden" name="responsible_emails" id="responsibleEmails">
+                            <input type="hidden" name="is_self_assigned" value="false">
+                        </div>
+                        {% endif %}
+
+                        <!-- Target Date -->
+                        <div class="form-group">
+                            <label>Target Date *</label>
+                            <input type="date" name="target_date" class="form-control"
+                                   value="{{ object.target_date|date:'Y-m-d' }}" required>
+                        </div>
+
+                        <!-- Status -->
+                        <div class="form-group">
+                            <label>Status *</label>
+                            <select name="status" id="statusSelect" class="form-control">
+                                {% for value, label in object.STATUS_CHOICES %}
+                                <option value="{{ value }}" {% if object.status == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Completion Date -->
+                        <div class="form-group" id="completionDateGroup" style="display:none;">
+                            <label>Completion Date</label>
+                            <input type="date" name="completion_date" class="form-control"
+                                   value="{{ object.completion_date|date:'Y-m-d' }}">
+                        </div>
+
+                        <!-- 📎 Attachment Section -->
+                        <div class="form-group">
+                            <!-- *** MODIFIED: Label now indicates requirement *** -->
+                            <label><i class="fas fa-paperclip"></i> Attachment *</label>
+
+                            {% if object.attachment %}
+                            <div id="currentAttachment" class="mb-2">
+                                <strong>Current File:</strong>
+                                <a href="{{ object.attachment.url }}" target="_blank">
+                                    <i class="fas fa-file-alt"></i> {{ object.get_attachment_name }}
+                                </a>
+                          
+                                <!-- *** MODIFIED: "Remove" button and hidden input are removed *** -->
+                            </div>
+                            <small id="replaceHelpText" class="form-text text-muted">
+                                To replace, choose a new file below. The current file will be overwritten.
+                            </small>
+                            {% endif %}
+
+                            <div class="custom-file">
+                                <!-- *** MODIFIED: Input is only required if no attachment exists *** -->
+                                <input type="file" class="custom-file-input"
+                                       id="attachment" name="attachment" {% if not object.attachment %}required{% endif %}>
+                                <label class="custom-file-label" for="attachment">
+                                    {% if object.attachment %}
+                                        Choose new file to replace
+                                    {% else %}
+                                        Choose file to attach
+                                    {% endif %}
+                                </label>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="fas fa-save"></i> Update
+                        </button>
+                        <a href="{{ cancel_url }}"
+                           class="btn btn-secondary btn-lg">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    // ... (email and status handling JavaScript remains the same) ...
+    const isSelfAssigned = document.querySelector('input[name="is_self_assigned"]').value === 'true';
+
+    /* ================= EMAIL TAG HANDLING ================= */
+    if (!isSelfAssigned) {
+        const emailInput = document.getElementById('emailInput');
+        const emailTagsContainer = document.getElementById('emailTagsContainer');
+        const responsibleEmails = document.getElementById('responsibleEmails');
+        const emailCount = document.getElementById('emailCount');
+        let emails = [];
+
+        const existingEmails = '{{ object.responsible_emails|escapejs }}';
+        if (existingEmails) {
+            emails = existingEmails.split(',').map(e => e.trim()).filter(Boolean);
+            updateUI();
+        }
+
+        function isValidEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function addEmail(email) {
+            email = email.trim().toLowerCase();
+            if (!email || !isValidEmail(email) || emails.includes(email)) return;
+            emails.push(email);
+            updateUI();
+        }
+
+        function updateUI() {
+            emailTagsContainer.querySelectorAll('.email-tag').forEach(e => e.remove());
+            emails.forEach(email => {
+                const tag = document.createElement('span');
+                tag.className = 'email-tag';
+                tag.innerHTML = `${email} <span class="remove-tag" data-email="${email}">×</span>`;
+                emailTagsContainer.insertBefore(tag, emailInput);
+            });
+            responsibleEmails.value = emails.join(', ');
+            emailCount.textContent = `${emails.length} email(s) added`;
+            emailInput.value = '';
+        }
+
+        emailInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                addEmail(emailInput.value);
+            }
+        });
+
+        emailTagsContainer.addEventListener('click', e => {
+            if (e.target.classList.contains('remove-tag')) {
+                emails = emails.filter(em => em !== e.target.dataset.email);
+                updateUI();
+            }
+        });
+    }
+
+    /* ================= STATUS HANDLING ================= */
+    const statusSelect = document.getElementById('statusSelect');
+    const completionDateGroup = document.getElementById('completionDateGroup');
+
+    function toggleCompletionFields() {
+        completionDateGroup.style.display =
+            statusSelect.value === 'COMPLETED' ? 'block' : 'none';
+    }
+
+    statusSelect.addEventListener('change', toggleCompletionFields);
+    toggleCompletionFields();
+
+    /* ================= ATTACHMENT HANDLING ================= */
+    const removeBtn = document.getElementById('removeAttachmentBtn');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', function () {
+            if (confirm('Remove current attachment?')) {
+                document.getElementById('removeAttachmentInput').value = 'true';
+                document.getElementById('currentAttachment').style.display = 'none';
+                if (document.getElementById('replaceHelpText')) {
+                    document.getElementById('replaceHelpText').style.display = 'none';
+                }
+                document.querySelector('.custom-file-label').textContent =
+                    'Attachment removed. Choose a new file if needed.';
+            }
+        });
+    }
+
+    document.querySelectorAll('.custom-file-input').forEach(input => {
+        input.addEventListener('change', function () {
+            this.nextElementSibling.textContent =
+                this.files.length ? this.files[0].name : 'Choose file';
+        });
+    });
+});
+</script>
+{% endblock %}

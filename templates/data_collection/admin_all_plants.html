@@ -1,0 +1,237 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load custom_tags %}
+{% block title %}All Plants Data{% endblock %}
+{% block page_title %}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'environmental:plant-entry' %}">Environmental Data Entry</a></li>
+<li class="breadcrumb-item"><a href="{% url 'environmental:plant-data-view' %}">View Enviromental Data</a></li>
+<li class="breadcrumb-item active">All Plants Data</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.admin-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}
+
+.header-section {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    border-radius: 0.75rem;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    color: white;
+}
+
+.plant-section {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.plant-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 3px solid #dc2626;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.data-table thead {
+    background: #f8fafc;
+}
+
+.data-table tbody tr:hover {
+    background: #f1f5f9;
+}
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 0.5rem;
+}
+
+.data-table {
+    min-width: 1200px; /* prevents squishing */
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.data-table th {
+    background: #f1f5f9;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.data-table td:first-child,
+.data-table th:first-child {
+    text-align: left;
+    position: sticky;
+    left: 0;
+    background: #ffffff;
+    z-index: 2;
+    font-weight: 600;
+}
+
+.data-table thead th:first-child {
+    z-index: 3;
+    background: #f1f5f9;
+}
+
+.data-table tbody tr:hover {
+    background: #f8fafc;
+}
+
+.btn-export {
+    margin-top: 17px;
+    background: dodgerblue; 
+    color: #ffffff;
+}
+
+.btn-export:hover {
+    background: #145a32;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(29, 111, 66, 0.3);
+}
+
+.btn-export i {
+    font-size: 15px;
+}
+
+.btn-export:disabled {
+    background: #95a5a6;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none;
+}
+
+.btn-export i{
+    margin-right: 8px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-container">
+
+    <!-- RED HEADER WITH DROPDOWN -->
+    <div class="header-section"
+         style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+
+        <div>
+            <h2>All Plants Environmental Data</h2>
+            <p>
+                Total Plants: {{ total_plants }} |
+                Plants with Data: {{ plants_with_data }} |
+                Total Questions: {{ total_questions }}
+            </p>
+        <button type="button" class="btn btn-export" id="exportBtn"><i class="fas fa-file-excel"></i> Export to Excel</button>
+        </div>
+
+        <div>
+            <label style="font-weight:600; margin-right:8px;">Select Plant</label>
+            <select id="plantFilter"
+                    style="padding:10px 14px; border-radius:6px; border:none; font-weight:600; min-width:220px;">
+                <option value="all">All plants</option>
+                {% for plant_data in plants_data %}
+                    <option value="plant-{{ plant_data.plant.id }}">
+                        {{ plant_data.plant.name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- PLANT DATA SECTIONS -->
+    {% for plant_data in plants_data %}
+    <div class="plant-section" id="plant-{{ plant_data.plant.id }}">
+        <h3 class="plant-title">{{ plant_data.plant.name }}</h3>
+
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Environmental Indicator</th>
+                        {% for month in months %}
+                            <th>{{ month }}</th>
+                        {% endfor %}
+                        <th>Annual</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for q in plant_data.questions_data %}
+                    <tr>
+                        <td><strong>{{ q.question }}</strong> ({{ q.unit }})</td>
+                        {% for month in months %}
+                            <td>{{ q.month_data|get_item:month|default:"-" }}</td>
+                        {% endfor %}
+                        <td><strong>{{ q.annual }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const plantFilter = document.getElementById('plantFilter');
+    const sections = document.querySelectorAll('.plant-section');
+    const exportBtn = document.getElementById('exportBtn');
+    plantFilter.addEventListener('change', function () {
+        const selected = this.value;
+
+        sections.forEach(section => {
+            section.style.display =
+                (selected === 'all' || section.id === selected)
+                ? 'block'
+                : 'none';
+        });
+    });
+    exportBtn.addEventListener("click", function () {
+        if (exportBtn.dataset.clicked === "true") return;
+
+        exportBtn.dataset.clicked = "true";
+        exportBtn.disabled = true;
+        exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Exporting...';
+        window.location.href = "{% url 'environmental:export_excel' %}?plant_id={{ plant.id }}";
+
+        setTimeout(() => {
+            exportBtn.disabled = false;
+            exportBtn.dataset.clicked = "false";
+            exportBtn.innerHTML = '<i class="fas fa-file-excel"></i> Export to Excel';
+        }, 3000);
+    });
+});
+</script>
+{% endblock %}

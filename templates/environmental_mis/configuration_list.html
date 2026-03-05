@@ -1,0 +1,86 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Configuration List{% endblock %}
+{% block page_title %}Configuration List{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item">
+    <a href="{% url 'dashboards:home' %}">Home</a>
+</li>
+<li class="breadcrumb-item active">
+    Configuration List
+</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+<div class="col-md-12">
+
+<div class="mb-3 text-right">
+    <a href="{% url 'environmental_mis:configuration_flow' %}"
+       class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add Configuration
+    </a>
+</div>
+
+<div class="card">
+<div class="card-header">
+    <h3 class="card-title">
+        <i class="fas fa-list mr-2"></i>
+        Business Structure List
+    </h3>
+</div>
+
+<div class="card-body">
+
+{% if categories %}
+<div class="table-responsive">
+<table class="table table-bordered table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Business Type -Domain</th>
+            <th>Category</th>
+            <th>SubCategory</th>
+        </tr>
+    </thead>
+    <tbody>
+
+        {% for category in categories %}
+
+            {% if category.subcategories.all %}
+                {% for sub in category.subcategories.all %}
+                <tr>
+                    <td>{{ category.domain.business_type.name }} - {{ category.domain.name }}</td>
+                    <td>{{ category.name }} - <strong>{{ sub.name }}</strong></td>
+                    <td></td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td>{{ category.domain.business_type.name }} - {{ category.domain.name }}</td>
+                    <td>{{ category.name }}</td>
+                </tr>
+            {% endif %}
+
+        {% endfor %}
+
+    </tbody>
+</table>
+</div>
+{% else %}
+<div class="text-center py-5">
+    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+    <p class="text-muted">No configuration found.</p>
+    <a href="{% url 'environmental_mis:configuration_flow' %}"
+       class="btn btn-primary">
+        <i class="fas fa-plus"></i> Add First Configuration
+    </a>
+</div>
+{% endif %}
+
+</div>
+</div>
+
+</div>
+</div>
+{% endblock %}
