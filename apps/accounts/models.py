@@ -172,7 +172,45 @@ class User(AbstractUser):
         verbose_name="Can Close Hazards",
         help_text="User can close resolved hazards"
     )
- 
+    # ============================================
+    # TRAINING MODULE PERMISSIONS
+    # ============================================
+    can_access_training_module = models.BooleanField(
+        default=False,
+        verbose_name="Can Access Training Module"
+    )
+    can_create_training_session = models.BooleanField(
+        default=False,
+        verbose_name="Can Create Training Session"
+    )
+    can_edit_training_session = models.BooleanField(
+        default=False,
+        verbose_name="Can Edit Training Session"
+    )
+    can_mark_training_attendance = models.BooleanField(
+        default=False,
+        verbose_name="Can Mark Training Attendance"
+    )
+    can_upload_training_certificate = models.BooleanField(
+        default=False,
+        verbose_name="Can Upload Training Certificate"
+    )
+    can_view_training_compliance = models.BooleanField(
+        default=False,
+        verbose_name="Can View Training Compliance"
+    )
+    can_manage_training_topics = models.BooleanField(
+        default=False,
+        verbose_name="Can Manage Training Topics"
+    )
+    can_manage_training_requirements = models.BooleanField(
+        default=False,
+        verbose_name="Can Manage Training Requirements"
+    )
+    can_close_training_session = models.BooleanField(
+        default=False,
+        verbose_name="Can Close Training Session"
+    )
     class Meta:
         ordering = ['first_name', 'last_name']
         verbose_name = 'User'
@@ -247,6 +285,16 @@ class User(AbstractUser):
             # Closures (2 modules)
             'CLOSE_INCIDENT': 'can_close_incidents',
             'CLOSE_HAZARD': 'can_close_hazards',
+            # Training Module
+            'ACCESS_TRAINING_MODULE':        'can_access_training_module',
+            'CREATE_TRAINING_SESSION':       'can_create_training_session',
+            'EDIT_TRAINING_SESSION':         'can_edit_training_session',
+            'MARK_TRAINING_ATTENDANCE':      'can_mark_training_attendance',
+            'UPLOAD_TRAINING_CERTIFICATE':   'can_upload_training_certificate',
+            'VIEW_TRAINING_COMPLIANCE':      'can_view_training_compliance',
+            'MANAGE_TRAINING_TOPICS':        'can_manage_training_topics',
+            'MANAGE_TRAINING_REQUIREMENTS':  'can_manage_training_requirements',
+            'CLOSE_TRAINING_SESSION':        'can_close_training_session',
         }
         
         self._reset_all_permissions()
@@ -273,6 +321,15 @@ class User(AbstractUser):
         self.can_approve_inspections = False
         self.can_close_incidents = False
         self.can_close_hazards = False
+        self.can_access_training_module = False
+        self.can_create_training_session = False
+        self.can_edit_training_session = False
+        self.can_mark_training_attendance = False
+        self.can_upload_training_certificate = False
+        self.can_view_training_compliance = False
+        self.can_manage_training_topics = False
+        self.can_manage_training_requirements = False
+        self.can_close_training_session = False
 
     def has_permission(self, code):
         """Check if user has a specific permission by code"""

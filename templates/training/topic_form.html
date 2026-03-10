@@ -1,0 +1,113 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ action }} Training Topic{% endblock %}
+{% block page_title %}{{ action }} Training Topic{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:dashboard' %}">Training</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:topic_list' %}">Topics</a></li>
+<li class="breadcrumb-item active">{{ action }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 offset-md-2">
+    <div class="ehs-card">
+      <div class="card-header bg-primary text-white">
+        <h3 class="card-title mb-0">
+          <i class="fas fa-book mr-2"></i>{{ action }} Training Topic
+        </h3>
+      </div>
+      <form method="POST">
+        {% csrf_token %}
+        <div class="card-body">
+
+          {% if form.errors %}
+          <div class="alert alert-danger alert-dismissible fade show">
+            <h6><i class="fas fa-exclamation-triangle mr-2"></i>Please correct the errors:</h6>
+            <ul class="mb-0">
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+            </ul>
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+          </div>
+          {% endif %}
+
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label>Topic Name <span class="text-danger">*</span></label>
+              {{ form.name }}
+              {% if form.name.errors %}<div class="text-danger small">{{ form.name.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label>Topic Code <span class="text-danger">*</span></label>
+              {{ form.code }}
+              {% if form.code.errors %}<div class="text-danger small">{{ form.code.errors }}</div>{% endif %}
+              <small class="form-text text-muted">e.g. FIRE_SAFE, PPE_BASIC</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>Category <span class="text-danger">*</span></label>
+              {{ form.category }}
+            </div>
+            <div class="col-md-3 mb-3">
+              <label>Validity Period (Days) <span class="text-danger">*</span></label>
+              {{ form.validity_period_days }}
+              <small class="form-text text-muted">e.g. 365 = 1 year</small>
+            </div>
+            <div class="col-md-3 mb-3">
+              <label>Passing Score (%)</label>
+              {{ form.passing_score }}
+              <small class="form-text text-muted">Min score to pass (default 70)</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label>Description</label>
+              {{ form.description }}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <div class="form-check mt-4">
+                {{ form.is_mandatory }}
+                <label class="form-check-label" for="{{ form.is_mandatory.id_for_label }}">
+                  <strong>Mandatory Training</strong>
+                  <br><small class="text-muted">If checked, compliance matrix will track this for all employees</small>
+                </label>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="form-check mt-4">
+                {{ form.is_active }}
+                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                  <strong>Active</strong>
+                  <br><small class="text-muted">Inactive topics cannot be used in new sessions</small>
+                </label>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save mr-2"></i>{{ action }} Topic
+          </button>
+          <a href="{% url 'training:topic_list' %}" class="btn btn-secondary btn-lg ml-2">
+            <i class="fas fa-times mr-2"></i>Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
