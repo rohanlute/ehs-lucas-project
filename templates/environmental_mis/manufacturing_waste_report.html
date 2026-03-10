@@ -1,816 +1,3017 @@
-{% extends 'base/base.html' %}
+{% extends 'base/base.html' %} 
 {% load static %}
-
-{% block title %}Environmental Data Entry{% endblock %}
-
-{% block extra_css %}
+{% load environment_filters %}
+{% block title %}Environmental Data Entry{% endblock %} {% block extra_css %}
 <style>
+    body {
+        overflow-x: hidden;
+    }
 
-:root {
-    --border:#e2e8f0;
-    --header-bg:#f1f5f9;
-    --total-bg:#eef2ff;
-    --quarter-bg:#f8fafc;
-}
+    :root {
+        --border: #e2e8f0;
+        --header-bg: #f1f5f9;
+        --total-bg: #eef2ff;
+        --quarter-bg: #f8fafc;
+    }
 
-/* ==================== HEADER SECTION ==================== */
+    /* ================= HEADER ================= */
 
-.header-section {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-    border-radius: 10px;
-    padding: 2rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-    color: white;
-}
+    .header-section {
+        background: linear-gradient(135deg, #2563eb, #1e40af);
+        border-radius: 10px;
+        padding: 2rem;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+        color: #fff;
+    }
 
-.header-content {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:1rem;
-}
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
 
-.header-info h2 {
-    margin:0 0 0.75rem 0;
-    font-size:1.8rem;
-    font-weight:700;
-    color:white;
-}
+    .header-info h2 {
+        margin: 0 0 10px 0;
+        font-size: 26px;
+        font-weight: 700;
+    }
 
-.plant-info {
-    display:flex;
-    flex-wrap:wrap;
-    gap:1.5rem;
-    font-size:0.95rem;
-    opacity:0.95;
-}
+    .plant-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        font-size: 14px;
+        opacity: 0.95;
+    }
 
-.plant-info strong{
-    color:rgba(255,255,255,0.9);
-    font-weight:600;
-}
+    /* ================= TABLE WRAPPER ================= */
 
-.btn-manage-questions{
-    background:white;
-    color:#1e40af;
-    padding:10px 18px;
-    border-radius:8px;
-    text-decoration:none;
-    font-weight:600;
-    display:flex;
-    align-items:center;
-    gap:6px;
-}
+    .table-wrapper {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: #fff;
+    }
 
-.env-data-container{
-    padding:1.5rem;
-    background:#f8fafc;
-}
+    /* ================= MAIN TABLE ================= */
 
-.table-wrapper{
-    overflow-x:auto;
-    border:1px solid var(--border);
-    border-radius:10px;
-    background:#fff;
-}
+    .main-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+        width: max-content;
+    }
 
-.main-table{
-    border-collapse:separate;
-    border-spacing:0;
-    width:max-content;
-    min-width:1900px;
-    table-layout:fixed;
-}
+    .main-table th,
+    .main-table td {
+        border: 1px solid var(--border);
+        padding: 6px;
+        font-size: 12px;
+        text-align: center;
+        vertical-align: middle;
+        background: #fff;
+    }
 
-.main-table th,
-.main-table td{
-    border:1px solid var(--border);
-    padding:6px;
-    font-size:12px;
-    text-align:center;
-    vertical-align:middle;
-    background:#fff;
-}
+    /* ================= HEADER ================= */
 
-.main-table thead th{
-    background:var(--header-bg);
-    font-weight:600;
-    position:sticky;
-    top:0;
-    z-index:3;
-}
+    .main-table thead th {
+        background: var(--header-bg);
+        font-weight: 600;
+        position: sticky;
+        top: 0;
+        z-index: 30;
+    }
 
-.main-table th:nth-child(1),
-.main-table td:nth-child(1){
-    width:45px;
-    min-width:45px;
-}
+    /* ================= COLUMN WIDTHS ================= */
 
-.main-table th:nth-child(2),
-.main-table td:nth-child(2){
-    width:130px;
-    min-width:130px;
-}
+    .main-table th:nth-child(1),
+    .main-table td:nth-child(1) {
+        width: 40px;
+        min-width: 40px;
+    }
 
-.main-table th:nth-child(3),
-.main-table td:nth-child(3){
-    width:190px;
-    min-width:190px;
-}
+    .main-table th:nth-child(2),
+    .main-table td:nth-child(2) {
+        width: 130px;
+        min-width: 130px;
+    }
 
-.sticky-col{
-    position:sticky;
-    left:0;
-    background:#fff;
-    z-index:4;
-}
+    .main-table th:nth-child(3),
+    .main-table td:nth-child(3) {
+        width: 200px;
+        min-width: 200px;
+        text-align: left;
+        word-break: break-word;
+    }
 
-.sticky-col-2{ left:45px; }
-.sticky-col-3{ left:175px; }
-.sticky-col-4{ left:365px; }
-.sticky-col-5{ left:485px; }
+    .main-table th:nth-child(4),
+    .main-table td:nth-child(4) {
+        width: 90px;
+        min-width: 90px;
+    }
 
-.sticky-col,
-.sticky-col-2,
-.sticky-col-3,
-.sticky-col-4,
-.sticky-col-5{
-    border-right:1px solid var(--border);
-    box-shadow:2px 0 0 var(--border);
-}
+    .main-table th:nth-child(5),
+    .main-table td:nth-child(5) {
+        width: 60px;
+        min-width: 60px;
+    }
 
-.main-table thead .sticky-col,
-.main-table thead .sticky-col-2,
-.main-table thead .sticky-col-3,
-.main-table thead .sticky-col-4,
-.main-table thead .sticky-col-5{
-    background:var(--header-bg);
-    z-index:6;
-}
+    .main-table th:nth-child(6),
+    .main-table td:nth-child(6) {
+        width: 70px;
+        min-width: 70px;
+    }
 
-.data-input{
-    width:90px;
-    height:28px;
-    padding:4px;
-    border:1px solid #cbd5e1;
-    border-radius:6px;
-    font-size:12px;
-    text-align:right;
-    box-sizing:border-box;
-}
+    /* ================= STICKY COLUMNS ================= */
 
-.select-box{
-    text-align:center;
-}
+    .sticky-col,
+    .sticky-col-2,
+    .sticky-col-3,
+    .sticky-col-4,
+    .sticky-col-5,
+    .sticky-col-6 {
+        position: sticky;
+        background: #fff;
+        z-index: 25;
+    }
 
-.main-table td:not(.sticky-col) .data-input{
-    margin:4px;
-}
+    .sticky-col {
+        left: 0;
+    }
+    .sticky-col-2 {
+        left: 40px;
+    }
+    .sticky-col-3 {
+        left: 170px;
+    }
+    .sticky-col-4 {
+        left: 370px;
+    }
+    .sticky-col-5 {
+        left: 460px;
+    }
+    .sticky-col-6 {
+        left: 520px;
+    }
 
-.data-input[readonly]{
-    background:#f1f5f9;
-    font-weight:500;
-}
+    /* Sticky header fix */
 
-.quarter-col{
-    background:var(--quarter-bg);
-}
+    .main-table thead .sticky-col,
+    .main-table thead .sticky-col-2,
+    .main-table thead .sticky-col-3,
+    .main-table thead .sticky-col-4,
+    .main-table thead .sticky-col-5,
+    .main-table thead .sticky-col-6 {
+        background: var(--header-bg);
+        z-index: 40;
+    }
 
-.total-row td{
-    background:var(--total-bg);
-    font-weight:600;
-}
+    /* ================= INPUT FIELDS ================= */
 
-.main-table th:nth-child(5),
-.main-table td:nth-child(5){
-    border-right:2px solid #cbd5e1;
-}
+    .data-input {
+        width: 85px;
+        height: 28px;
+        padding: 4px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 12px;
+        text-align: right;
+        box-sizing: border-box;
+    }
 
-.table-wrapper::-webkit-scrollbar{
-    height:8px;
-}
+    .sticky-col-4 .data-input {
+        width: 80px;
+        text-align: left;
+    }
 
-.table-wrapper::-webkit-scrollbar-thumb{
-    background:#cbd5e1;
-    border-radius:10px;
-}
+    .data-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 1px #3b82f6;
+    }
 
+    .data-input[readonly] {
+        background: #f1f5f9;
+        font-weight: 500;
+    }
+
+    /* ================= QUARTER COLUMN ================= */
+
+    .quarter-col {
+        background: var(--quarter-bg);
+    }
+
+    /* ================= SCROLLBAR ================= */
+
+    .table-wrapper::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 10px;
+    }
+
+    /* ================= STICKY BORDER ================= */
+
+    .sticky-col,
+    .sticky-col-2,
+    .sticky-col-3,
+    .sticky-col-4,
+    .sticky-col-5,
+    .sticky-col-6 {
+        box-shadow: 2px 0 0 var(--border);
+    }
+
+    /* ================= TOTAL QUANTITY ROW ================= */
+
+    .total-row-highlight td {
+        background: #8fb0cc !important;
+        font-weight: 600;
+    }
+
+    /* keep first two columns white */
+
+    .total-row-highlight .sticky-col,
+    .total-row-highlight .sticky-col-2 {
+        background: #fff !important;
+    }
+
+    /* make sticky columns 3–6 blue and stay fixed */
+
+    .total-row-highlight .sticky-col-3,
+    .total-row-highlight .sticky-col-4,
+    .total-row-highlight .sticky-col-5,
+    .total-row-highlight .sticky-col-6 {
+        background: #8fb0cc !important;
+        z-index: 26;
+    }
+
+    /* inputs inside colored cells */
+
+    .total-row-highlight input {
+        background: #8fb0cc;
+        border-color: #6e96b7;
+        cursor: not-allowed;
+    }
+
+    /* inputs inside first two columns stay white */
+
+    .total-row-highlight .sticky-col input,
+    .total-row-highlight .sticky-col-2 input {
+        background: #fff;
+    }
+
+    .summary-wrapper {
+        overflow-x: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+
+    .summary-table {
+        border-collapse: separate;
+        border-spacing: 0;
+        width: max-content;
+        min-width: 2000px;
+    }
+
+    .summary-table th,
+    .summary-table td {
+        border: 1px solid #e2e8f0;
+        padding: 6px;
+        text-align: center;
+        font-size: 13px;
+    }
+
+    .summary-table thead th {
+        background: #f1f5f9;
+    }
+
+    .summary-sticky {
+        position: sticky;
+        left: 0;
+        background: #fff;
+        min-width: 250px;
+        text-align: left !important;
+        z-index: 5;
+    }
+
+    .summary-table thead .summary-sticky {
+        background: #f1f5f9;
+    }
+
+    /* ==================== PLANT SELECTOR ==================== */
+    .plant-selector-section {
+        background: linear-gradient(135deg, #2563eb, #1e40af);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+    
+    }
+
+    .plant-selector-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .plant-selector-container label {
+        font-weight: 600;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .plant-selector-container label i {
+        color: var(--primary-color);
+        font-size: 1.1rem;
+    }
+
+    .plant-selector-container select {
+        flex: 1;
+        min-width: 250px;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: var(--radius-md);
+        font-size: 0.95rem;
+        color: var(--text-primary);
+        background: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .plant-selector-container select:hover {
+        border-color: var(--primary-color);
+    }
+
+    .plant-selector-container select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .plant-count-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 600;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .plant-count-badge i {
+        font-size: 1rem;
+    }
 </style>
-{% endblock %}
 
-
-
-{% block content %}
+{% endblock %} {% block content %}
 
 <div class="env-data-container">
+    <div class="header-section">
+        <div class="header-content">
+        <div class="header-info">
+            <h2><i class="fas fa-leaf"></i> Environmental Waste Data Entry</h2>
 
-<div class="header-section">
-<div class="header-content">
+            <div class="plant-info">
+            <span
+                ><strong>Currently Editing:</strong> {{ selected_plant.name }}</span
+            >
+            <span><strong>Year:</strong> {{ current_year }}</span>
+            <span><strong>Last Updated:</strong> {% now "F d, Y - H:i" %}</span>
+            </div>
+        </div>
+        </div>
+    </div>
+    <!-- ============================= -->
+    <!-- Plant & Waste Selector -->
+    <!-- ============================= -->
+    <div class="plant-selector-section">
 
-<div class="header-info">
-<h2><i class="fas fa-leaf"></i> Environmental Waste Data Entry</h2>
+        <div class="row align-items-center">
 
-<div class="plant-info">
-<span><strong>Currently Editing:</strong> {{ selected_plant.name }}</span>
-<span><strong>Year:</strong> {{ current_year }}</span>
-<span><strong>Last Updated:</strong> {% now "F d, Y - H:i" %}</span>
+            <!-- Plant Selector -->
+            <div class="col-md-5">
+            <div class="plant-selector-container">
+
+                <label>
+                <i class="fas fa-building"></i>
+                <span>Select Plant:</span>
+                </label>
+
+                <select onchange="switchPlant(this.value)">
+
+                {% for plant in user_plants %}
+                <option value="{{ plant.id }}"
+                {% if plant.id == selected_plant.id %}selected{% endif %}>
+                {{ plant.name }}
+                </option>
+                {% endfor %}
+
+                </select>
+
+            </div>
+            </div>
+
+            <!-- Plant Count Badge -->
+            <div class="col-md-2 text-end">
+
+            <span class="plant-count-badge">
+
+                <i class="fas fa-check-circle"></i>
+                {{ user_plants.count }} plant(s)
+
+            </span>
+
+            </div>
+
+
+            <!-- Waste Type -->
+            <div class="col-md-5">
+
+            <div class="plant-selector-container">
+
+                <label>
+                <i class="fas fa-recycle"></i>
+                <span>Waste Type:</span>
+                </label>
+
+                <select id="wasteType" onchange="switchWasteType()">
+
+                <option value="MANUFACTURING"
+                {% if selected_type == "MANUFACTURING" %}selected{% endif %}>
+                Manufacturing Waste
+                </option>
+
+                <option value="NON_MANUFACTURING"
+                {% if selected_type == "NON_MANUFACTURING" %}selected{% endif %}>
+                Non Manufacturing Waste
+                </option>
+
+                </select>
+
+            </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="table-wrapper">
+        <table class="main-table" id="rightTable">
+            <thead>
+                <tr>
+                <th colspan="41" style="background: #dbeafe; font-size: 16px; font-weight: 700">
+                    MONTHLY ENVIRONMENTAL DATA - {{ current_year }}
+                </th>
+                </tr>
+                <tr>
+                <th class="sticky-col">SL NO.</th>
+                <th class="sticky-col sticky-col-2"></th>
+                <th class="sticky-col sticky-col-3">SCRAP</th>
+                <th class="sticky-col sticky-col-4">PART CODE</th>
+                <th class="sticky-col sticky-col-5">Unit</th>
+                <th class="sticky-col sticky-col-6">TREATMENT</th>
+                <th>Jan QTY</th>
+                <th>Jan COST</th>
+                <th>Feb QTY</th>
+                <th>Feb COST</th>
+                <th>Mar QTY</th>
+                <th>Mar COST</th>
+                <th class="quarter-col">I Q (QTY)</th>
+                <th class="quarter-col">I Q (COST)</th>
+
+                <th>Apr QTY</th>
+                <th>Apr COST</th>
+                <th>May QTY</th>
+                <th>May COST</th>
+                <th>Jun QTY</th>
+                <th>Jun COST</th>
+                <th class="quarter-col">II Q (QTY)</th>
+                <th class="quarter-col">II Q (COST)</th>
+
+                <th>Jul QTY</th>
+                <th>Jul COST</th>
+                <th>Aug QTY</th>
+                <th>Aug COST</th>
+                <th>Sep QTY</th>
+                <th>Sep COST</th>
+                <th class="quarter-col">III Q (QTY)</th>
+                <th class="quarter-col">III Q (COST)</th>
+
+                <th>Oct QTY</th>
+                <th>Oct COST</th>
+                <th>Nov QTY</th>
+                <th>Nov COST</th>
+                <th>Dec QTY</th>
+                <th>Dec COST</th>
+                <th class="quarter-col">IV Q (QTY)</th>
+                <th class="quarter-col">IV Q (COST)</th>
+
+                <th>TOTAL (QTY)</th>
+                <th>TOTAL (COST)</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for row in report_rows %}
+
+                {% with saved=data_map|get_item:row.row_key %}
+
+                <tr
+                data-row="{{ row.row_key }}"
+                data-waste="{{ row.waste_type }}"
+                data-subtype="{{ row.sub_type|default:'' }}"
+                class="{% if row.question == 'TOTAL QUANTITY' or row.question == 'GRAND TOTAL E WASTE' %}total-row-highlight{% endif %}">
+
+                <td class="sticky-col">{{ forloop.counter }}</td>
+
+                <td class="sticky-col sticky-col-2">{{ row.section }}</td>
+
+                <td class="sticky-col sticky-col-3">{{ row.question }}</td>
+
+                <td class="sticky-col sticky-col-4">
+                {% if row.question == "TOTAL QUANTITY" or row.question == "GRAND TOTAL E WASTE" %}
+                {{ row.part_code }}
+                {% else %}
+                <input type="text" class="data-input part-code"
+                value="{% if saved %}{{ saved.part_code }}{% endif %}">
+                {% endif %}
+                </td>
+
+                <td class="sticky-col sticky-col-5">{{ row.unit }}</td>
+                <td class="sticky-col sticky-col-6">{{ row.treatment_type }}</td>
+
+                <!-- JAN -->
+                <td>
+                <input type="number" class="data-input qty jan-qty"
+                value="{% if saved %}{{ saved.jan_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost jan-cost"
+                value="{% if saved %}{{ saved.jan_cost }}{% endif %}">
+                </td>
+
+                <!-- FEB -->
+                <td>
+                <input type="number" class="data-input qty feb-qty"
+                value="{% if saved %}{{ saved.feb_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost feb-cost"
+                value="{% if saved %}{{ saved.feb_cost }}{% endif %}">
+                </td>
+
+                <!-- MAR -->
+                <td>
+                <input type="number" class="data-input qty mar-qty"
+                value="{% if saved %}{{ saved.mar_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost mar-cost"
+                value="{% if saved %}{{ saved.mar_cost }}{% endif %}">
+                </td>
+
+                <!-- Q1 -->
+                <td><input type="number" class="data-input q1-qty" readonly></td>
+                <td><input type="number" class="data-input q1-cost" readonly></td>
+
+                <!-- APR -->
+                <td>
+                <input type="number" class="data-input qty apr-qty"
+                value="{% if saved %}{{ saved.apr_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost apr-cost"
+                value="{% if saved %}{{ saved.apr_cost }}{% endif %}">
+                </td>
+
+                <!-- MAY -->
+                <td>
+                <input type="number" class="data-input qty may-qty"
+                value="{% if saved %}{{ saved.may_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost may-cost"
+                value="{% if saved %}{{ saved.may_cost }}{% endif %}">
+                </td>
+
+                <!-- JUN -->
+                <td>
+                <input type="number" class="data-input qty jun-qty"
+                value="{% if saved %}{{ saved.jun_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost jun-cost"
+                value="{% if saved %}{{ saved.jun_cost }}{% endif %}">
+                </td>
+
+                <!-- Q2 -->
+                <td><input type="number" class="data-input q2-qty" readonly></td>
+                <td><input type="number" class="data-input q2-cost" readonly></td>
+
+                <!-- JUL -->
+                <td>
+                <input type="number" class="data-input qty jul-qty"
+                value="{% if saved %}{{ saved.jul_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost jul-cost"
+                value="{% if saved %}{{ saved.jul_cost }}{% endif %}">
+                </td>
+
+                <!-- AUG -->
+                <td>
+                <input type="number" class="data-input qty aug-qty"
+                value="{% if saved %}{{ saved.aug_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost aug-cost"
+                value="{% if saved %}{{ saved.aug_cost }}{% endif %}">
+                </td>
+
+                <!-- SEP -->
+                <td>
+                <input type="number" class="data-input qty sep-qty"
+                value="{% if saved %}{{ saved.sep_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost sep-cost"
+                value="{% if saved %}{{ saved.sep_cost }}{% endif %}">
+                </td>
+
+                <!-- Q3 -->
+                <td><input type="number" class="data-input q3-qty" readonly></td>
+                <td><input type="number" class="data-input q3-cost" readonly></td>
+
+                <!-- OCT -->
+                <td>
+                <input type="number" class="data-input qty oct-qty"
+                value="{% if saved %}{{ saved.oct_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost oct-cost"
+                value="{% if saved %}{{ saved.oct_cost }}{% endif %}">
+                </td>
+
+                <!-- NOV -->
+                <td>
+                <input type="number" class="data-input qty nov-qty"
+                value="{% if saved %}{{ saved.nov_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost nov-cost"
+                value="{% if saved %}{{ saved.nov_cost }}{% endif %}">
+                </td>
+
+                <!-- DEC -->
+                <td>
+                <input type="number" class="data-input qty dec-qty"
+                value="{% if saved %}{{ saved.dec_qty }}{% endif %}">
+                </td>
+
+                <td>
+                <input type="number" class="data-input cost dec-cost"
+                value="{% if saved %}{{ saved.dec_cost }}{% endif %}">
+                </td>
+
+                <!-- Q4 -->
+                <td><input type="number" class="data-input q4-qty" readonly></td>
+                <td><input type="number" class="data-input q4-cost" readonly></td>
+
+                <!-- TOTAL -->
+                <td><input type="number" class="data-input total-qty" readonly></td>
+                <td><input type="number" class="data-input total-cost" readonly></td>
+
+                </tr>
+
+                {% endwith %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <!-- ============================= -->
+    <!-- WASTE SUMMARY TOTALS -->
+    <!-- ============================= -->
+    <div class="summary-wrapper">
+        <table class="summary-table">
+        <thead>
+            <tr>
+            <th class="summary-sticky">Waste Type</th>
+
+            <th>Jan QTY</th>
+            <th>Jan COST</th>
+
+            <th>Feb QTY</th>
+            <th>Feb COST</th>
+
+            <th>Mar QTY</th>
+            <th>Mar COST</th>
+
+            <th>I Q (QTY)</th>
+            <th>I Q (COST)</th>
+
+            <th>Apr QTY</th>
+            <th>Apr COST</th>
+
+            <th>May QTY</th>
+            <th>May COST</th>
+
+            <th>Jun QTY</th>
+            <th>Jun COST</th>
+
+            <th>II Q (QTY)</th>
+            <th>II Q (COST)</th>
+
+            <th>Jul QTY</th>
+            <th>Jul COST</th>
+
+            <th>Aug QTY</th>
+            <th>Aug COST</th>
+
+            <th>Sep QTY</th>
+            <th>Sep COST</th>
+
+            <th>III Q (QTY)</th>
+            <th>III Q (COST)</th>
+
+            <th>Oct QTY</th>
+            <th>Oct COST</th>
+
+            <th>Nov QTY</th>
+            <th>Nov COST</th>
+
+            <th>Dec QTY</th>
+            <th>Dec COST</th>
+
+            <th>IV Q (QTY)</th>
+            <th>IV Q (COST)</th>
+
+            <th>TOTAL (QTY)</th>
+            <th>TOTAL (COST)</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            <!--Total Non Hazardous Waste -->
+            <tr>
+                <td class="summary-sticky"><strong>Total Non Hazardous Waste</strong></td>
+
+                <td id="nonhaz_jan_qty">{{ summary_map.NON_HAZ.jan_qty|default:0 }}</td>
+                <td id="nonhaz_jan_cost">{{ summary_map.NON_HAZ.jan_cost|default:0 }}</td>
+
+                <td id="nonhaz_feb_qty">{{ summary_map.NON_HAZ.feb_qty|default:0 }}</td>
+                <td id="nonhaz_feb_cost">{{ summary_map.NON_HAZ.feb_cost|default:0 }}</td>
+
+                <td id="nonhaz_mar_qty">{{ summary_map.NON_HAZ.mar_qty|default:0 }}</td>
+                <td id="nonhaz_mar_cost">{{ summary_map.NON_HAZ.mar_cost|default:0 }}</td>
+
+                <td id="nonhaz_q1_qty">{{ summary_map.NON_HAZ.q1_quantity|default:0 }}</td>
+                <td id="nonhaz_q1_cost">{{ summary_map.NON_HAZ.q1_cost|default:0 }}</td>
+
+                <td id="nonhaz_apr_qty">{{ summary_map.NON_HAZ.apr_qty|default:0 }}</td>
+                <td id="nonhaz_apr_cost">{{ summary_map.NON_HAZ.apr_cost|default:0 }}</td>
+
+                <td id="nonhaz_may_qty">{{ summary_map.NON_HAZ.may_qty|default:0 }}</td>
+                <td id="nonhaz_may_cost">{{ summary_map.NON_HAZ.may_cost|default:0 }}</td>
+
+                <td id="nonhaz_jun_qty">{{ summary_map.NON_HAZ.jun_qty|default:0 }}</td>
+                <td id="nonhaz_jun_cost">{{ summary_map.NON_HAZ.jun_cost|default:0 }}</td>
+
+                <td id="nonhaz_q2_qty">{{ summary_map.NON_HAZ.q2_quantity|default:0 }}</td>
+                <td id="nonhaz_q2_cost">{{ summary_map.NON_HAZ.q2_cost|default:0 }}</td>
+
+                <td id="nonhaz_jul_qty">{{ summary_map.NON_HAZ.jul_qty|default:0 }}</td>
+                <td id="nonhaz_jul_cost">{{ summary_map.NON_HAZ.jul_cost|default:0 }}</td>
+
+                <td id="nonhaz_aug_qty">{{ summary_map.NON_HAZ.aug_qty|default:0 }}</td>
+                <td id="nonhaz_aug_cost">{{ summary_map.NON_HAZ.aug_cost|default:0 }}</td>
+
+                <td id="nonhaz_sep_qty">{{ summary_map.NON_HAZ.sep_qty|default:0 }}</td>
+                <td id="nonhaz_sep_cost">{{ summary_map.NON_HAZ.sep_cost|default:0 }}</td>
+
+                <td id="nonhaz_q3_qty">{{ summary_map.NON_HAZ.q3_quantity|default:0 }}</td>
+                <td id="nonhaz_q3_cost">{{ summary_map.NON_HAZ.q3_cost|default:0 }}</td>
+
+                <td id="nonhaz_oct_qty">{{ summary_map.NON_HAZ.oct_qty|default:0 }}</td>
+                <td id="nonhaz_oct_cost">{{ summary_map.NON_HAZ.oct_cost|default:0 }}</td>
+
+                <td id="nonhaz_nov_qty">{{ summary_map.NON_HAZ.nov_qty|default:0 }}</td>
+                <td id="nonhaz_nov_cost">{{ summary_map.NON_HAZ.nov_cost|default:0 }}</td>
+
+                <td id="nonhaz_dec_qty">{{ summary_map.NON_HAZ.dec_qty|default:0 }}</td>
+                <td id="nonhaz_dec_cost">{{ summary_map.NON_HAZ.dec_cost|default:0 }}</td>
+
+                <td id="nonhaz_q4_qty">{{ summary_map.NON_HAZ.q4_quantity|default:0 }}</td>
+                <td id="nonhaz_q4_cost">{{ summary_map.NON_HAZ.q4_cost|default:0 }}</td>
+
+                <td id="nonhaz_total_qty">{{ summary_map.NON_HAZ.total_quantity|default:0 }}</td>
+                <td id="nonhaz_total_cost">{{ summary_map.NON_HAZ.total_cost|default:0 }}</td>
+
+            </tr>
+            <!-- Total Hazardous Waste (Process) -->
+            <tr data-waste="HAZ_PROCESS">
+
+                <td class="summary-sticky"><strong>Total Hazardous Waste (Process)</strong></td>
+
+                <td id="hazProc_jan_qty">{{ summary_map.HAZ_PROCESS.jan_qty|default:0 }}</td>
+                <td id="hazProc_jan_cost">{{ summary_map.HAZ_PROCESS.jan_cost|default:0 }}</td>
+
+                <td id="hazProc_feb_qty">{{ summary_map.HAZ_PROCESS.feb_qty|default:0 }}</td>
+                <td id="hazProc_feb_cost">{{ summary_map.HAZ_PROCESS.feb_cost|default:0 }}</td>
+
+                <td id="hazProc_mar_qty">{{ summary_map.HAZ_PROCESS.mar_qty|default:0 }}</td>
+                <td id="hazProc_mar_cost">{{ summary_map.HAZ_PROCESS.mar_cost|default:0 }}</td>
+
+                <td id="hazProc_q1_qty">{{ summary_map.HAZ_PROCESS.q1_quantity|default:0 }}</td>
+                <td id="hazProc_q1_cost">{{ summary_map.HAZ_PROCESS.q1_cost|default:0 }}</td>
+
+                <td id="hazProc_apr_qty">{{ summary_map.HAZ_PROCESS.apr_qty|default:0 }}</td>
+                <td id="hazProc_apr_cost">{{ summary_map.HAZ_PROCESS.apr_cost|default:0 }}</td>
+
+                <td id="hazProc_may_qty">{{ summary_map.HAZ_PROCESS.may_qty|default:0 }}</td>
+                <td id="hazProc_may_cost">{{ summary_map.HAZ_PROCESS.may_cost|default:0 }}</td>
+
+                <td id="hazProc_jun_qty">{{ summary_map.HAZ_PROCESS.jun_qty|default:0 }}</td>
+                <td id="hazProc_jun_cost">{{ summary_map.HAZ_PROCESS.jun_cost|default:0 }}</td>
+
+                <td id="hazProc_q2_qty">{{ summary_map.HAZ_PROCESS.q2_quantity|default:0 }}</td>
+                <td id="hazProc_q2_cost">{{ summary_map.HAZ_PROCESS.q2_cost|default:0 }}</td>
+
+                <td id="hazProc_jul_qty">{{ summary_map.HAZ_PROCESS.jul_qty|default:0 }}</td>
+                <td id="hazProc_jul_cost">{{ summary_map.HAZ_PROCESS.jul_cost|default:0 }}</td>
+
+                <td id="hazProc_aug_qty">{{ summary_map.HAZ_PROCESS.aug_qty|default:0 }}</td>
+                <td id="hazProc_aug_cost">{{ summary_map.HAZ_PROCESS.aug_cost|default:0 }}</td>
+
+                <td id="hazProc_sep_qty">{{ summary_map.HAZ_PROCESS.sep_qty|default:0 }}</td>
+                <td id="hazProc_sep_cost">{{ summary_map.HAZ_PROCESS.sep_cost|default:0 }}</td>
+
+                <td id="hazProc_q3_qty">{{ summary_map.HAZ_PROCESS.q3_quantity|default:0 }}</td>
+                <td id="hazProc_q3_cost">{{ summary_map.HAZ_PROCESS.q3_cost|default:0 }}</td>
+
+                <td id="hazProc_oct_qty">{{ summary_map.HAZ_PROCESS.oct_qty|default:0 }}</td>
+                <td id="hazProc_oct_cost">{{ summary_map.HAZ_PROCESS.oct_cost|default:0 }}</td>
+
+                <td id="hazProc_nov_qty">{{ summary_map.HAZ_PROCESS.nov_qty|default:0 }}</td>
+                <td id="hazProc_nov_cost">{{ summary_map.HAZ_PROCESS.nov_cost|default:0 }}</td>
+
+                <td id="hazProc_dec_qty">{{ summary_map.HAZ_PROCESS.dec_qty|default:0 }}</td>
+                <td id="hazProc_dec_cost">{{ summary_map.HAZ_PROCESS.dec_cost|default:0 }}</td>
+
+                <td id="hazProc_q4_qty">{{ summary_map.HAZ_PROCESS.q4_quantity|default:0 }}</td>
+                <td id="hazProc_q4_cost">{{ summary_map.HAZ_PROCESS.q4_cost|default:0 }}</td>
+
+                <td id="hazProc_total_qty">{{ summary_map.HAZ_PROCESS.total_quantity|default:0 }}</td>
+                <td id="hazProc_total_cost">{{ summary_map.HAZ_PROCESS.total_cost|default:0 }}</td>
+
+            </tr>
+            <!-- Total E-Waste -->
+            <tr data-waste="E_WASTE">
+
+                <td class="summary-sticky"><strong>Total E-Waste</strong></td>
+
+                <td id="EWaste_jan_qty">{{ summary_map.E_WASTE.jan_qty|default:0 }}</td>
+                <td id="EWaste_jan_cost">{{ summary_map.E_WASTE.jan_cost|default:0 }}</td>
+
+                <td id="EWaste_feb_qty">{{ summary_map.E_WASTE.feb_qty|default:0 }}</td>
+                <td id="EWaste_feb_cost">{{ summary_map.E_WASTE.feb_cost|default:0 }}</td>
+
+                <td id="EWaste_mar_qty">{{ summary_map.E_WASTE.mar_qty|default:0 }}</td>
+                <td id="EWaste_mar_cost">{{ summary_map.E_WASTE.mar_cost|default:0 }}</td>
+
+                <td id="EWaste_q1_qty">{{ summary_map.E_WASTE.q1_quantity|default:0 }}</td>
+                <td id="EWaste_q1_cost">{{ summary_map.E_WASTE.q1_cost|default:0 }}</td>
+
+                <td id="EWaste_apr_qty">{{ summary_map.E_WASTE.apr_qty|default:0 }}</td>
+                <td id="EWaste_apr_cost">{{ summary_map.E_WASTE.apr_cost|default:0 }}</td>
+
+                <td id="EWaste_may_qty">{{ summary_map.E_WASTE.may_qty|default:0 }}</td>
+                <td id="EWaste_may_cost">{{ summary_map.E_WASTE.may_cost|default:0 }}</td>
+
+                <td id="EWaste_jun_qty">{{ summary_map.E_WASTE.jun_qty|default:0 }}</td>
+                <td id="EWaste_jun_cost">{{ summary_map.E_WASTE.jun_cost|default:0 }}</td>
+
+                <td id="EWaste_q2_qty">{{ summary_map.E_WASTE.q2_quantity|default:0 }}</td>
+                <td id="EWaste_q2_cost">{{ summary_map.E_WASTE.q2_cost|default:0 }}</td>
+
+                <td id="EWaste_jul_qty">{{ summary_map.E_WASTE.jul_qty|default:0 }}</td>
+                <td id="EWaste_jul_cost">{{ summary_map.E_WASTE.jul_cost|default:0 }}</td>
+
+                <td id="EWaste_aug_qty">{{ summary_map.E_WASTE.aug_qty|default:0 }}</td>
+                <td id="EWaste_aug_cost">{{ summary_map.E_WASTE.aug_cost|default:0 }}</td>
+
+                <td id="EWaste_sep_qty">{{ summary_map.E_WASTE.sep_qty|default:0 }}</td>
+                <td id="EWaste_sep_cost">{{ summary_map.E_WASTE.sep_cost|default:0 }}</td>
+
+                <td id="EWaste_q3_qty">{{ summary_map.E_WASTE.q3_quantity|default:0 }}</td>
+                <td id="EWaste_q3_cost">{{ summary_map.E_WASTE.q3_cost|default:0 }}</td>
+
+                <td id="EWaste_oct_qty">{{ summary_map.E_WASTE.oct_qty|default:0 }}</td>
+                <td id="EWaste_oct_cost">{{ summary_map.E_WASTE.oct_cost|default:0 }}</td>
+
+                <td id="EWaste_nov_qty">{{ summary_map.E_WASTE.nov_qty|default:0 }}</td>
+                <td id="EWaste_nov_cost">{{ summary_map.E_WASTE.nov_cost|default:0 }}</td>
+
+                <td id="EWaste_dec_qty">{{ summary_map.E_WASTE.dec_qty|default:0 }}</td>
+                <td id="EWaste_dec_cost">{{ summary_map.E_WASTE.dec_cost|default:0 }}</td>
+
+                <td id="EWaste_q4_qty">{{ summary_map.E_WASTE.q4_quantity|default:0 }}</td>
+                <td id="EWaste_q4_cost">{{ summary_map.E_WASTE.q4_cost|default:0 }}</td>
+
+                <td id="EWaste_total_qty">{{ summary_map.E_WASTE.total_quantity|default:0 }}</td>
+                <td id="EWaste_total_cost">{{ summary_map.E_WASTE.total_cost|default:0 }}</td>
+
+            </tr>
+            <!-- Grand Total - Waste -->
+            <tr>
+                <td class="summary-sticky"><strong>Grand Total - Waste</strong></td>
+
+                <td id="GWaste_jan_qty">{{ summary_map.GRAND_WASTE.jan_qty|default:0 }}</td>
+                <td id="GWaste_jan_cost">{{ summary_map.GRAND_WASTE.jan_cost|default:0 }}</td>
+
+                <td id="GWaste_feb_qty">{{ summary_map.GRAND_WASTE.feb_qty|default:0 }}</td>
+                <td id="GWaste_feb_cost">{{ summary_map.GRAND_WASTE.feb_cost|default:0 }}</td>
+
+                <td id="GWaste_mar_qty">{{ summary_map.GRAND_WASTE.mar_qty|default:0 }}</td>
+                <td id="GWaste_mar_cost">{{ summary_map.GRAND_WASTE.mar_cost|default:0 }}</td>
+
+                <td id="GWaste_q1_qty">{{ summary_map.GRAND_WASTE.q1_quantity|default:0 }}</td>
+                <td id="GWaste_q1_cost">{{ summary_map.GRAND_WASTE.q1_cost|default:0 }}</td>
+
+                <td id="GWaste_apr_qty">{{ summary_map.GRAND_WASTE.apr_qty|default:0 }}</td>
+                <td id="GWaste_apr_cost">{{ summary_map.GRAND_WASTE.apr_cost|default:0 }}</td>
+
+                <td id="GWaste_may_qty">{{ summary_map.GRAND_WASTE.may_qty|default:0 }}</td>
+                <td id="GWaste_may_cost">{{ summary_map.GRAND_WASTE.may_cost|default:0 }}</td>
+
+                <td id="GWaste_jun_qty">{{ summary_map.GRAND_WASTE.jun_qty|default:0 }}</td>
+                <td id="GWaste_jun_cost">{{ summary_map.GRAND_WASTE.jun_cost|default:0 }}</td>
+
+                <td id="GWaste_q2_qty">{{ summary_map.GRAND_WASTE.q2_quantity|default:0 }}</td>
+                <td id="GWaste_q2_cost">{{ summary_map.GRAND_WASTE.q2_cost|default:0 }}</td>
+
+                <td id="GWaste_jul_qty">{{ summary_map.GRAND_WASTE.jul_qty|default:0 }}</td>
+                <td id="GWaste_jul_cost">{{ summary_map.GRAND_WASTE.jul_cost|default:0 }}</td>
+
+                <td id="GWaste_aug_qty">{{ summary_map.GRAND_WASTE.aug_qty|default:0 }}</td>
+                <td id="GWaste_aug_cost">{{ summary_map.GRAND_WASTE.aug_cost|default:0 }}</td>
+
+                <td id="GWaste_sep_qty">{{ summary_map.GRAND_WASTE.sep_qty|default:0 }}</td>
+                <td id="GWaste_sep_cost">{{ summary_map.GRAND_WASTE.sep_cost|default:0 }}</td>
+
+                <td id="GWaste_q3_qty">{{ summary_map.GRAND_WASTE.q3_quantity|default:0 }}</td>
+                <td id="GWaste_q3_cost">{{ summary_map.GRAND_WASTE.q3_cost|default:0 }}</td>
+
+                <td id="GWaste_oct_qty">{{ summary_map.GRAND_WASTE.oct_qty|default:0 }}</td>
+                <td id="GWaste_oct_cost">{{ summary_map.GRAND_WASTE.oct_cost|default:0 }}</td>
+
+                <td id="GWaste_nov_qty">{{ summary_map.GRAND_WASTE.nov_qty|default:0 }}</td>
+                <td id="GWaste_nov_cost">{{ summary_map.GRAND_WASTE.nov_cost|default:0 }}</td>
+
+                <td id="GWaste_dec_qty">{{ summary_map.GRAND_WASTE.dec_qty|default:0 }}</td>
+                <td id="GWaste_dec_cost">{{ summary_map.GRAND_WASTE.dec_cost|default:0 }}</td>
+
+                <td id="GWaste_q4_qty">{{ summary_map.GRAND_WASTE.q4_quantity|default:0 }}</td>
+                <td id="GWaste_q4_cost">{{ summary_map.GRAND_WASTE.q4_cost|default:0 }}</td>
+
+                <td id="GWaste_total_qty">{{ summary_map.GRAND_WASTE.total_quantity|default:0 }}</td>
+                <td id="GWaste_total_cost">{{ summary_map.GRAND_WASTE.total_cost|default:0 }}</td>
+
+            </tr>
+            <!-- Production in Month -->
+            <tr>
+                <td class="summary-sticky"><strong>Production in Month</strong></td>
+
+                <td id="ProdMonth_jan_qty">{{ production_summary.jan|floatformat:2 }}</td>
+                <td id="ProdMonth_jan_cost"></td>
+
+                <td id="ProdMonth_feb_qty">{{ production_summary.feb|floatformat:2 }}</td>
+                <td id="ProdMonth_feb_cost"></td>
+
+                <td id="ProdMonth_mar_qty">{{ production_summary.mar|floatformat:2 }}</td>
+                <td id="ProdMonth_mar_cost"></td>
+
+                <td id="ProdMonth_q1_qty">{{ production_summary.q1|floatformat:2 }}</td>
+                <td id="ProdMonth_q1_cost"></td>
+
+                <td id="ProdMonth_apr_qty">{{ production_summary.apr|floatformat:2 }}</td>
+                <td id="ProdMonth_apr_cost"></td>
+
+                <td id="ProdMonth_may_qty">{{ production_summary.may|floatformat:2 }}</td>
+                <td id="ProdMonth_may_cost"></td>
+
+                <td id="ProdMonth_jun_qty">{{ production_summary.jun|floatformat:2 }}</td>
+                <td id="ProdMonth_jun_cost"></td>
+
+                <td id="ProdMonth_q2_qty">{{ production_summary.q2|floatformat:2 }}</td>
+                <td id="ProdMonth_q2_cost"></td>
+
+                <td id="ProdMonth_jul_qty">{{ production_summary.jul|floatformat:2 }}</td>
+                <td id="ProdMonth_jul_cost"></td>
+
+                <td id="ProdMonth_aug_qty">{{ production_summary.aug|floatformat:2 }}</td>
+                <td id="ProdMonth_aug_cost"></td>
+
+                <td id="ProdMonth_sep_qty">{{ production_summary.sep|floatformat:2 }}</td>
+                <td id="ProdMonth_sep_cost"></td>
+
+                <td id="ProdMonth_q3_qty">{{ production_summary.q3|floatformat:2 }}</td>
+                <td id="ProdMonth_q3_cost"></td>
+
+                <td id="ProdMonth_oct_qty">{{ production_summary.oct|floatformat:2 }}</td>
+                <td id="ProdMonth_oct_cost"></td>
+
+                <td id="ProdMonth_nov_qty">{{ production_summary.nov|floatformat:2 }}</td>
+                <td id="ProdMonth_nov_cost"></td>
+
+                <td id="ProdMonth_dec_qty">{{ production_summary.dec|floatformat:2 }}</td>
+                <td id="ProdMonth_dec_cost"></td>
+
+                <td id="ProdMonth_q4_qty">{{ production_summary.q4|floatformat:2 }}</td>
+                <td id="ProdMonth_q4_cost"></td>
+
+                <td id="ProdMonth_total_qty">{{ production_summary.total|floatformat:2 }}</td>
+                <td id="ProdMonth_total_cost"></td>
+
+            </tr>
+            <!-- Non Hazardous waste / Unit (Kg/unit) -->
+            <tr>
+                <td class="summary-sticky">
+                <strong>Non Hazardous waste / Unit (Kg/unit)</strong>
+                </td>
+
+                <td id="NonHazWaste_jan_qty">{{ summary_map.NON_HAZ_UNIT.jan_qty|default:0 }}</td>
+                <td id="NonHazWaste_jan_cost">{{ summary_map.NON_HAZ_UNIT.jan_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_feb_qty">{{ summary_map.NON_HAZ_UNIT.feb_qty|default:0 }}</td>
+                <td id="NonHazWaste_feb_cost">{{ summary_map.NON_HAZ_UNIT.feb_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_mar_qty">{{ summary_map.NON_HAZ_UNIT.mar_qty|default:0 }}</td>
+                <td id="NonHazWaste_mar_cost">{{ summary_map.NON_HAZ_UNIT.mar_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_q1_qty">{{ summary_map.NON_HAZ_UNIT.q1_quantity|default:0 }}</td>
+                <td id="NonHazWaste_q1_cost">{{ summary_map.NON_HAZ_UNIT.q1_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_apr_qty">{{ summary_map.NON_HAZ_UNIT.apr_qty|default:0 }}</td>
+                <td id="NonHazWaste_apr_cost">{{ summary_map.NON_HAZ_UNIT.apr_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_may_qty">{{ summary_map.NON_HAZ_UNIT.may_qty|default:0 }}</td>
+                <td id="NonHazWaste_may_cost">{{ summary_map.NON_HAZ_UNIT.may_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_jun_qty">{{ summary_map.NON_HAZ_UNIT.jun_qty|default:0 }}</td>
+                <td id="NonHazWaste_jun_cost">{{ summary_map.NON_HAZ_UNIT.jun_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_q2_qty">{{ summary_map.NON_HAZ_UNIT.q2_quantity|default:0 }}</td>
+                <td id="NonHazWaste_q2_cost">{{ summary_map.NON_HAZ_UNIT.q2_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_jul_qty">{{ summary_map.NON_HAZ_UNIT.jul_qty|default:0 }}</td>
+                <td id="NonHazWaste_jul_cost">{{ summary_map.NON_HAZ_UNIT.jul_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_aug_qty">{{ summary_map.NON_HAZ_UNIT.aug_qty|default:0 }}</td>
+                <td id="NonHazWaste_aug_cost">{{ summary_map.NON_HAZ_UNIT.aug_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_sep_qty">{{ summary_map.NON_HAZ_UNIT.sep_qty|default:0 }}</td>
+                <td id="NonHazWaste_sep_cost">{{ summary_map.NON_HAZ_UNIT.sep_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_q3_qty">{{ summary_map.NON_HAZ_UNIT.q3_quantity|default:0 }}</td>
+                <td id="NonHazWaste_q3_cost">{{ summary_map.NON_HAZ_UNIT.q3_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_oct_qty">{{ summary_map.NON_HAZ_UNIT.oct_qty|default:0 }}</td>
+                <td id="NonHazWaste_oct_cost">{{ summary_map.NON_HAZ_UNIT.oct_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_nov_qty">{{ summary_map.NON_HAZ_UNIT.nov_qty|default:0 }}</td>
+                <td id="NonHazWaste_nov_cost">{{ summary_map.NON_HAZ_UNIT.nov_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_dec_qty">{{ summary_map.NON_HAZ_UNIT.dec_qty|default:0 }}</td>
+                <td id="NonHazWaste_dec_cost">{{ summary_map.NON_HAZ_UNIT.dec_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_q4_qty">{{ summary_map.NON_HAZ_UNIT.q4_quantity|default:0 }}</td>
+                <td id="NonHazWaste_q4_cost">{{ summary_map.NON_HAZ_UNIT.q4_cost|default:0 }}</td>
+
+                <td id="NonHazWaste_total_qty">{{ summary_map.NON_HAZ_UNIT.total_quantity|default:0 }}</td>
+                <td id="NonHazWaste_total_cost">{{ summary_map.NON_HAZ_UNIT.total_cost|default:0 }}</td>
+
+            </tr>
+            <!-- Process Hazardous waste / Unit (Kg/ Unit) -->
+            <tr>
+                <td class="summary-sticky">
+                <strong>Process Hazardous waste / Unit (Kg/ Unit)</strong>
+                </td>
+
+                <td id="ProcHazWaste_jan_qty">{{ summary_map.PROC_HAZ_UNIT.jan_qty|default:0 }}</td>
+                <td id="ProcHazWaste_jan_cost">{{ summary_map.PROC_HAZ_UNIT.jan_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_feb_qty">{{ summary_map.PROC_HAZ_UNIT.feb_qty|default:0 }}</td>
+                <td id="ProcHazWaste_feb_cost">{{ summary_map.PROC_HAZ_UNIT.feb_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_mar_qty">{{ summary_map.PROC_HAZ_UNIT.mar_qty|default:0 }}</td>
+                <td id="ProcHazWaste_mar_cost">{{ summary_map.PROC_HAZ_UNIT.mar_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_q1_qty">{{ summary_map.PROC_HAZ_UNIT.q1_quantity|default:0 }}</td>
+                <td id="ProcHazWaste_q1_cost">{{ summary_map.PROC_HAZ_UNIT.q1_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_apr_qty">{{ summary_map.PROC_HAZ_UNIT.apr_qty|default:0 }}</td>
+                <td id="ProcHazWaste_apr_cost">{{ summary_map.PROC_HAZ_UNIT.apr_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_may_qty">{{ summary_map.PROC_HAZ_UNIT.may_qty|default:0 }}</td>
+                <td id="ProcHazWaste_may_cost">{{ summary_map.PROC_HAZ_UNIT.may_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_jun_qty">{{ summary_map.PROC_HAZ_UNIT.jun_qty|default:0 }}</td>
+                <td id="ProcHazWaste_jun_cost">{{ summary_map.PROC_HAZ_UNIT.jun_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_q2_qty">{{ summary_map.PROC_HAZ_UNIT.q2_quantity|default:0 }}</td>
+                <td id="ProcHazWaste_q2_cost">{{ summary_map.PROC_HAZ_UNIT.q2_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_jul_qty">{{ summary_map.PROC_HAZ_UNIT.jul_qty|default:0 }}</td>
+                <td id="ProcHazWaste_jul_cost">{{ summary_map.PROC_HAZ_UNIT.jul_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_aug_qty">{{ summary_map.PROC_HAZ_UNIT.aug_qty|default:0 }}</td>
+                <td id="ProcHazWaste_aug_cost">{{ summary_map.PROC_HAZ_UNIT.aug_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_sep_qty">{{ summary_map.PROC_HAZ_UNIT.sep_qty|default:0 }}</td>
+                <td id="ProcHazWaste_sep_cost">{{ summary_map.PROC_HAZ_UNIT.sep_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_q3_qty">{{ summary_map.PROC_HAZ_UNIT.q3_quantity|default:0 }}</td>
+                <td id="ProcHazWaste_q3_cost">{{ summary_map.PROC_HAZ_UNIT.q3_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_oct_qty">{{ summary_map.PROC_HAZ_UNIT.oct_qty|default:0 }}</td>
+                <td id="ProcHazWaste_oct_cost">{{ summary_map.PROC_HAZ_UNIT.oct_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_nov_qty">{{ summary_map.PROC_HAZ_UNIT.nov_qty|default:0 }}</td>
+                <td id="ProcHazWaste_nov_cost">{{ summary_map.PROC_HAZ_UNIT.nov_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_dec_qty">{{ summary_map.PROC_HAZ_UNIT.dec_qty|default:0 }}</td>
+                <td id="ProcHazWaste_dec_cost">{{ summary_map.PROC_HAZ_UNIT.dec_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_q4_qty">{{ summary_map.PROC_HAZ_UNIT.q4_quantity|default:0 }}</td>
+                <td id="ProcHazWaste_q4_cost">{{ summary_map.PROC_HAZ_UNIT.q4_cost|default:0 }}</td>
+
+                <td id="ProcHazWaste_total_qty">{{ summary_map.PROC_HAZ_UNIT.total_quantity|default:0 }}</td>
+                <td id="ProcHazWaste_total_cost">{{ summary_map.PROC_HAZ_UNIT.total_cost|default:0 }}</td>
+
+            </tr>
+            <!-- Non-Process Hazardous Waste Kg -->
+            <tr data-waste="HAZ_NON_PROCESS">
+
+                <td class="summary-sticky">
+                <strong>Non-Process Hazardous Waste Kg</strong>
+                </td>
+
+                <td id="NoProcHazWaste_jan_qty">{{ summary_map.NON_PROC_HAZ.jan_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_jan_cost">{{ summary_map.NON_PROC_HAZ.jan_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_feb_qty">{{ summary_map.NON_PROC_HAZ.feb_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_feb_cost">{{ summary_map.NON_PROC_HAZ.feb_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_mar_qty">{{ summary_map.NON_PROC_HAZ.mar_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_mar_cost">{{ summary_map.NON_PROC_HAZ.mar_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_q1_qty">{{ summary_map.NON_PROC_HAZ.q1_quantity|default:0 }}</td>
+                <td id="NoProcHazWaste_q1_cost">{{ summary_map.NON_PROC_HAZ.q1_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_apr_qty">{{ summary_map.NON_PROC_HAZ.apr_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_apr_cost">{{ summary_map.NON_PROC_HAZ.apr_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_may_qty">{{ summary_map.NON_PROC_HAZ.may_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_may_cost">{{ summary_map.NON_PROC_HAZ.may_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_jun_qty">{{ summary_map.NON_PROC_HAZ.jun_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_jun_cost">{{ summary_map.NON_PROC_HAZ.jun_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_q2_qty">{{ summary_map.NON_PROC_HAZ.q2_quantity|default:0 }}</td>
+                <td id="NoProcHazWaste_q2_cost">{{ summary_map.NON_PROC_HAZ.q2_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_jul_qty">{{ summary_map.NON_PROC_HAZ.jul_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_jul_cost">{{ summary_map.NON_PROC_HAZ.jul_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_aug_qty">{{ summary_map.NON_PROC_HAZ.aug_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_aug_cost">{{ summary_map.NON_PROC_HAZ.aug_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_sep_qty">{{ summary_map.NON_PROC_HAZ.sep_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_sep_cost">{{ summary_map.NON_PROC_HAZ.sep_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_q3_qty">{{ summary_map.NON_PROC_HAZ.q3_quantity|default:0 }}</td>
+                <td id="NoProcHazWaste_q3_cost">{{ summary_map.NON_PROC_HAZ.q3_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_oct_qty">{{ summary_map.NON_PROC_HAZ.oct_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_oct_cost">{{ summary_map.NON_PROC_HAZ.oct_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_nov_qty">{{ summary_map.NON_PROC_HAZ.nov_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_nov_cost">{{ summary_map.NON_PROC_HAZ.nov_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_dec_qty">{{ summary_map.NON_PROC_HAZ.dec_qty|default:0 }}</td>
+                <td id="NoProcHazWaste_dec_cost">{{ summary_map.NON_PROC_HAZ.dec_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_q4_qty">{{ summary_map.NON_PROC_HAZ.q4_quantity|default:0 }}</td>
+                <td id="NoProcHazWaste_q4_cost">{{ summary_map.NON_PROC_HAZ.q4_cost|default:0 }}</td>
+
+                <td id="NoProcHazWaste_total_qty">{{ summary_map.NON_PROC_HAZ.total_quantity|default:0 }}</td>
+                <td id="NoProcHazWaste_total_cost">{{ summary_map.NON_PROC_HAZ.total_cost|default:0 }}</td>
+
+            </tr>
+            <!-- Diversion Rate -->
+            <tr>
+
+                <td class="summary-sticky">
+                <strong>Diversion Rate</strong>
+                </td>
+
+                <td id="DivRate_jan_qty">{{ summary_map.DIVERSION_RATE.jan_qty|default:0 }}</td>
+                <td id="DivRate_jan_cost">{{ summary_map.DIVERSION_RATE.jan_cost|default:0 }}</td>
+
+                <td id="DivRate_feb_qty">{{ summary_map.DIVERSION_RATE.feb_qty|default:0 }}</td>
+                <td id="DivRate_feb_cost">{{ summary_map.DIVERSION_RATE.feb_cost|default:0 }}</td>
+
+                <td id="DivRate_mar_qty">{{ summary_map.DIVERSION_RATE.mar_qty|default:0 }}</td>
+                <td id="DivRate_mar_cost">{{ summary_map.DIVERSION_RATE.mar_cost|default:0 }}</td>
+
+                <td id="DivRate_q1_qty">{{ summary_map.DIVERSION_RATE.q1_quantity|default:0 }}</td>
+                <td id="DivRate_q1_cost">{{ summary_map.DIVERSION_RATE.q1_cost|default:0 }}</td>
+
+
+                <td id="DivRate_apr_qty">{{ summary_map.DIVERSION_RATE.apr_qty|default:0 }}</td>
+                <td id="DivRate_apr_cost">{{ summary_map.DIVERSION_RATE.apr_cost|default:0 }}</td>
+
+                <td id="DivRate_may_qty">{{ summary_map.DIVERSION_RATE.may_qty|default:0 }}</td>
+                <td id="DivRate_may_cost">{{ summary_map.DIVERSION_RATE.may_cost|default:0 }}</td>
+
+                <td id="DivRate_jun_qty">{{ summary_map.DIVERSION_RATE.jun_qty|default:0 }}</td>
+                <td id="DivRate_jun_cost">{{ summary_map.DIVERSION_RATE.jun_cost|default:0 }}</td>
+
+                <td id="DivRate_q2_qty">{{ summary_map.DIVERSION_RATE.q2_quantity|default:0 }}</td>
+                <td id="DivRate_q2_cost">{{ summary_map.DIVERSION_RATE.q2_cost|default:0 }}</td>
+
+
+                <td id="DivRate_jul_qty">{{ summary_map.DIVERSION_RATE.jul_qty|default:0 }}</td>
+                <td id="DivRate_jul_cost">{{ summary_map.DIVERSION_RATE.jul_cost|default:0 }}</td>
+
+                <td id="DivRate_aug_qty">{{ summary_map.DIVERSION_RATE.aug_qty|default:0 }}</td>
+                <td id="DivRate_aug_cost">{{ summary_map.DIVERSION_RATE.aug_cost|default:0 }}</td>
+
+                <td id="DivRate_sep_qty">{{ summary_map.DIVERSION_RATE.sep_qty|default:0 }}</td>
+                <td id="DivRate_sep_cost">{{ summary_map.DIVERSION_RATE.sep_cost|default:0 }}</td>
+
+                <td id="DivRate_q3_qty">{{ summary_map.DIVERSION_RATE.q3_quantity|default:0 }}</td>
+                <td id="DivRate_q3_cost">{{ summary_map.DIVERSION_RATE.q3_cost|default:0 }}</td>
+
+
+                <td id="DivRate_oct_qty">{{ summary_map.DIVERSION_RATE.oct_qty|default:0 }}</td>
+                <td id="DivRate_oct_cost">{{ summary_map.DIVERSION_RATE.oct_cost|default:0 }}</td>
+
+                <td id="DivRate_nov_qty">{{ summary_map.DIVERSION_RATE.nov_qty|default:0 }}</td>
+                <td id="DivRate_nov_cost">{{ summary_map.DIVERSION_RATE.nov_cost|default:0 }}</td>
+
+                <td id="DivRate_dec_qty">{{ summary_map.DIVERSION_RATE.dec_qty|default:0 }}</td>
+                <td id="DivRate_dec_cost">{{ summary_map.DIVERSION_RATE.dec_cost|default:0 }}</td>
+
+                <td id="DivRate_q4_qty">{{ summary_map.DIVERSION_RATE.q4_quantity|default:0 }}</td>
+                <td id="DivRate_q4_cost">{{ summary_map.DIVERSION_RATE.q4_cost|default:0 }}</td>
+
+                <td id="DivRate_total_qty">{{ summary_map.DIVERSION_RATE.total_quantity|default:0 }}</td>
+                <td id="DivRate_total_cost">{{ summary_map.DIVERSION_RATE.total_cost|default:0 }}</td>
+
+            </tr>
+        </tbody>
+        </table>
+    </div>
+
+    <div style="margin-top: 20px; text-align: right">
+        <button id="saveDataBtn" class="btn btn-primary">
+        <i class="fas fa-save"></i> Save Report
+        </button>
+        <div id="saveMessage" style="display:none;margin-top:10px;color:green;font-weight:600">
+            Data saved successfully ✓
+            </div>
+    </div>
 </div>
 
-</div>
+{% comment %} <script>
 
-{% if user.is_superuser or user.is_staff or user.is_admin_user %}
-<a href="{% url 'environmental_mis:report_config_list' %}" class="btn-manage-questions">
-<i class="fas fa-cog"></i> Manage Questions
-</a>
-{% endif %}
+function calculateTotalsAndSummary(){
 
-</div>
-</div>
+const rows=document.querySelectorAll("#rightTable tbody tr");
 
+const months=[
+"jan","feb","mar",
+"apr","may","jun",
+"jul","aug","sep",
+"oct","nov","dec"
+];
 
-<div class="table-wrapper">
 
-<table class="main-table" id="rightTable">
+/* ================= STORAGE ================= */
 
-<thead>
-<tr>
+let sectionQty=new Array(12).fill(0);
+let sectionCost=new Array(12).fill(0);
 
-<th class="sticky-col">SL NO.</th>
-<th class="sticky-col sticky-col-2">CATEGORY</th>
-<th class="sticky-col sticky-col-3">QUESTION (UNIT)</th>
-<th class="sticky-col sticky-col-4" style="width:120px">PART CODE</th>
-<th class="sticky-col sticky-col-5" style="width:120px">TREATMENT</th>
+let nonHazQty=new Array(12).fill(0);
+let nonHazCost=new Array(12).fill(0);
 
-<th>Jan QTY</th><th>Jan COST</th>
-<th>Feb QTY</th><th>Feb COST</th>
-<th>Mar QTY</th><th>Mar COST</th>
-<th class="quarter-col">I Q (QTY)</th><th class="quarter-col">I Q (COST)</th>
+let hazQty=new Array(12).fill(0);
+let hazCost=new Array(12).fill(0);
 
-<th>Apr QTY</th><th>Apr COST</th>
-<th>May QTY</th><th>May COST</th>
-<th>Jun QTY</th><th>Jun COST</th>
-<th class="quarter-col">II Q (QTY)</th><th class="quarter-col">II Q (COST)</th>
+let nonProcessHazQty=new Array(12).fill(0);
+let nonProcessHazCost=new Array(12).fill(0);
 
-<th>Jul QTY</th><th>Jul COST</th>
-<th>Aug QTY</th><th>Aug COST</th>
-<th>Sep QTY</th><th>Sep COST</th>
-<th class="quarter-col">III Q (QTY)</th><th class="quarter-col">III Q (COST)</th>
 
-<th>Oct QTY</th><th>Oct COST</th>
-<th>Nov QTY</th><th>Nov COST</th>
-<th>Dec QTY</th><th>Dec COST</th>
-<th class="quarter-col">IV Q (QTY)</th><th class="quarter-col">IV Q (COST)</th>
+/* ================= MAIN TABLE ================= */
 
-<th>TOTAL (QTY)</th>
-<th>TOTAL (COST)</th>
+rows.forEach(row=>{
 
-</tr>
-</thead>
+const waste=row.dataset.waste;
+const subtype=row.dataset.subtype;
+const rowKey=row.dataset.row;
 
-<tbody>
+const qtyInputs=months.map(m=>row.querySelector(`.${m}-qty`));
+const costInputs=months.map(m=>row.querySelector(`.${m}-cost`));
 
-{% for row in report_rows %}
+if(!qtyInputs[0]) return;
 
-<tr data-config="{{ row.config_id }}" class="{% if row.is_total %}total-row{% endif %}">
 
-<td class="sticky-col">{{ row.sl_no }}</td>
+/* NORMAL ROW */
 
-<td class="sticky-col sticky-col-2">{{ row.category }}</td>
+if(!row.classList.contains("total-row-highlight") && rowKey!=="grand_total_e_waste"){
 
-<td class="sticky-col sticky-col-3">
-{% if row.is_total %}
-<strong>{{ row.scrap }}</strong>
-{% else %}
-{{ row.scrap }} ({{ row.unit }})
-{% endif %}
-</td>
+let rowQty=0;
+let rowCost=0;
 
+for(let i=0;i<12;i++){
 
-<!-- PART CODE -->
-<td class="sticky-col sticky-col-4">
+let qty=parseFloat(qtyInputs[i]?.value||0);
+let cost=parseFloat(costInputs[i]?.value||0);
 
-{% if not row.is_total %}
+rowQty+=qty;
+rowCost+=cost;
 
-<input type="text"
-class="data-input part-code"
-value="{% if row.saved %}{{ row.saved.part_code }}{% endif %}">
+sectionQty[i]+=qty;
+sectionCost[i]+=cost;
 
-{% endif %}
 
-</td>
+/* SUMMARY STORAGE */
 
+if(waste==="NON_HAZ"){
+nonHazQty[i]+=qty;
+nonHazCost[i]+=cost;
+}
 
-<!-- TREATMENT -->
-<td class="sticky-col sticky-col-5">
+if(waste==="HAZ_WASTE"){
+hazQty[i]+=qty;
+hazCost[i]+=cost;
+}
 
-{% if not row.is_total %}
+if(subtype==="NON_PROCESS_HAZ"){
+nonProcessHazQty[i]+=qty;
+nonProcessHazCost[i]+=cost;
+}
 
-<select class="data-input treatment">
+}
 
-<option value="R"
-{% if row.saved and row.saved.treatment == "R" %}selected{% endif %}>
-Recycling
-</option>
 
-<option value="D"
-{% if row.saved and row.saved.treatment == "D" %}selected{% endif %}>
-Disposal
-</option>
+/* QUARTERS */
 
-<option value="S"
-{% if row.saved and row.saved.treatment == "S" %}selected{% endif %}>
-Storage
-</option>
-
-</select>
-
-{% endif %}
-
-</td>
-
-
-<!-- JAN -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.jan_qty|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-<td>
-<input type="text" class="data-input month-cost" value="{% if row.saved %}{{ row.saved.jan_cost|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-
-<!-- FEB -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.feb_qty|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.feb_cost|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-
-<!-- MAR -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.mar_qty|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.mar_cost|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-
-<!-- Q1 -->
-<td class="quarter-col">
-<input type="text" class="data-input quarter-qty"
-value="{% if row.saved %}{{ row.saved.q1_quantity|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-<td class="quarter-col">
-<input type="text" class="data-input quarter-cost"
-value="{% if row.saved %}{{ row.saved.q1_cost|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-
-<!-- APR -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.apr_qty|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.apr_cost|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-
-<!-- MAY -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.may_qty|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.may_cost|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-
-<!-- JUN -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.jun_qty|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.jun_cost|floatformat:2 }}{% endif %}"
-{% if row.is_total %}readonly{% endif %}>
-</td>
-
-
-<!-- Q2 -->
-<td class="quarter-col">
-<input type="text" class="data-input quarter-qty"
-value="{% if row.saved %}{{ row.saved.q2_quantity|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-<td class="quarter-col">
-<input type="text" class="data-input quarter-cost"
-value="{% if row.saved %}{{ row.saved.q2_cost|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-
-<!-- JUL -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.jul_qty|floatformat:2 }}{% endif %}">
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.jul_cost|floatformat:2 }}{% endif %}">
-</td>
-
-
-<!-- AUG -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.aug_qty|floatformat:2 }}{% endif %}">
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.aug_cost|floatformat:2 }}{% endif %}">
-</td>
-
-
-<!-- SEP -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.sep_qty|floatformat:2 }}{% endif %}">
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.sep_cost|floatformat:2 }}{% endif %}">
-</td>
-
-
-<!-- Q3 -->
-<td class="quarter-col">
-<input type="text" class="data-input quarter-qty"
-value="{% if row.saved %}{{ row.saved.q3_quantity|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-<td class="quarter-col">
-<input type="text" class="data-input quarter-cost"
-value="{% if row.saved %}{{ row.saved.q3_cost|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-
-<!-- OCT -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.oct_qty|floatformat:2 }}{% endif %}">
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.oct_cost|floatformat:2 }}{% endif %}">
-</td>
-
-
-<!-- NOV -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.nov_qty|floatformat:2 }}{% endif %}">
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.nov_cost|floatformat:2 }}{% endif %}">
-</td>
-
-
-<!-- DEC -->
-<td>
-<input type="text" class="data-input month-qty"
-value="{% if row.saved %}{{ row.saved.dec_qty|floatformat:2 }}{% endif %}">
-</td>
-
-<td>
-<input type="text" class="data-input month-cost"
-value="{% if row.saved %}{{ row.saved.dec_cost|floatformat:2 }}{% endif %}">
-</td>
-
-
-<!-- Q4 -->
-<td class="quarter-col">
-<input type="text" class="data-input quarter-qty"
-value="{% if row.saved %}{{ row.saved.q4_quantity|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-<td class="quarter-col">
-<input type="text" class="data-input quarter-cost"
-value="{% if row.saved %}{{ row.saved.q4_cost|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-
-<!-- TOTAL -->
-<td>
-<input type="text" class="data-input total-qty"
-value="{% if row.saved %}{{ row.saved.total_quantity|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-<td>
-<input type="text" class="data-input total-cost"
-value="{% if row.saved %}{{ row.saved.total_cost|floatformat:2 }}{% endif %}"
-readonly>
-</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-</table>
-
-</div>
-
-
-<div style="margin-top:20px;text-align:right;">
-<button id="saveDataBtn" class="btn btn-primary">
-<i class="fas fa-save"></i> Save Report
-</button>
-</div>
-
-</div>
+for(let q=0;q<4;q++){
+
+let qQty=0;
+let qCost=0;
+
+for(let m=q*3;m<q*3+3;m++){
+
+qQty+=parseFloat(qtyInputs[m]?.value||0);
+qCost+=parseFloat(costInputs[m]?.value||0);
+
+}
+
+row.querySelector(`.q${q+1}-qty`).value=qQty.toFixed(2);
+row.querySelector(`.q${q+1}-cost`).value=qCost.toFixed(2);
+
+}
+
+
+/* ROW TOTAL */
+
+row.querySelector(".total-qty").value=rowQty.toFixed(2);
+row.querySelector(".total-cost").value=rowCost.toFixed(2);
+
+}
+
+
+/* SECTION TOTAL */
+
+else if(rowKey!=="grand_total_e_waste"){
+
+for(let i=0;i<12;i++){
+
+qtyInputs[i].value=sectionQty[i].toFixed(2);
+costInputs[i].value=sectionCost[i].toFixed(2);
+
+}
+
+for(let q=0;q<4;q++){
+
+let qQty=0;
+let qCost=0;
+
+for(let m=q*3;m<q*3+3;m++){
+
+qQty+=sectionQty[m];
+qCost+=sectionCost[m];
+
+}
+
+row.querySelector(`.q${q+1}-qty`).value=qQty.toFixed(2);
+row.querySelector(`.q${q+1}-cost`).value=qCost.toFixed(2);
+
+}
+
+let totalQty=sectionQty.reduce((a,b)=>a+b,0);
+let totalCost=sectionCost.reduce((a,b)=>a+b,0);
+
+row.querySelector(".total-qty").value=totalQty.toFixed(2);
+row.querySelector(".total-cost").value=totalCost.toFixed(2);
+
+sectionQty.fill(0);
+sectionCost.fill(0);
+
+}
+
+});
+
+
+/* ================= GRAND TOTAL E-WASTE ================= */
+
+const ewasteRow=document.querySelector('[data-row="ewaste_total_quantity"]');
+const bulbsRow=document.querySelector('[data-row="bulbs_lamps_total_quantity"]');
+const grandRow=document.querySelector('[data-row="grand_total_e_waste"]');
+
+if(ewasteRow && bulbsRow && grandRow){
+
+months.forEach(m=>{
+
+let ewQty=parseFloat(ewasteRow.querySelector(`.${m}-qty`)?.value||0);
+let blQty=parseFloat(bulbsRow.querySelector(`.${m}-qty`)?.value||0);
+
+let ewCost=parseFloat(ewasteRow.querySelector(`.${m}-cost`)?.value||0);
+let blCost=parseFloat(bulbsRow.querySelector(`.${m}-cost`)?.value||0);
+
+grandRow.querySelector(`.${m}-qty`).value=(ewQty+blQty).toFixed(2);
+grandRow.querySelector(`.${m}-cost`).value=(ewCost+blCost).toFixed(2);
+
+});
+
+}
+
+
+/* ================= SUMMARY FUNCTIONS ================= */
+
+function sum(arr){
+return arr.reduce((a,b)=>a+b,0);
+}
+
+function qsum(arr,start){
+return arr[start]+arr[start+1]+arr[start+2];
+}
+
+
+/* ================= MONTHLY SUMMARY ================= */
+
+months.forEach((m,i)=>{
+
+document.getElementById(`nonhaz_${m}_qty`).innerText=nonHazQty[i].toFixed(2);
+document.getElementById(`nonhaz_${m}_cost`).innerText=nonHazCost[i].toFixed(2);
+
+document.getElementById(`hazProc_${m}_qty`).innerText=hazQty[i].toFixed(2);
+document.getElementById(`hazProc_${m}_cost`).innerText=hazCost[i].toFixed(2);
+
+document.getElementById(`NoProcHazWaste_${m}_qty`).innerText=nonProcessHazQty[i].toFixed(2);
+document.getElementById(`NoProcHazWaste_${m}_cost`).innerText=nonProcessHazCost[i].toFixed(2);
+
+});
+
+
+/* ================= QUARTERS ================= */
+
+for(let q=0;q<4;q++){
+
+document.getElementById(`nonhaz_q${q+1}_qty`).innerText=qsum(nonHazQty,q*3).toFixed(2);
+document.getElementById(`nonhaz_q${q+1}_cost`).innerText=qsum(nonHazCost,q*3).toFixed(2);
+
+document.getElementById(`hazProc_q${q+1}_qty`).innerText=qsum(hazQty,q*3).toFixed(2);
+document.getElementById(`hazProc_q${q+1}_cost`).innerText=qsum(hazCost,q*3).toFixed(2);
+
+document.getElementById(`NoProcHazWaste_q${q+1}_qty`).innerText=qsum(nonProcessHazQty,q*3).toFixed(2);
+document.getElementById(`NoProcHazWaste_q${q+1}_cost`).innerText=qsum(nonProcessHazCost,q*3).toFixed(2);
+
+}
+
+
+/* ================= TOTALS ================= */
+
+document.getElementById("nonhaz_total_qty").innerText=sum(nonHazQty).toFixed(2);
+document.getElementById("nonhaz_total_cost").innerText=sum(nonHazCost).toFixed(2);
+
+document.getElementById("hazProc_total_qty").innerText=sum(hazQty).toFixed(2);
+document.getElementById("hazProc_total_cost").innerText=sum(hazCost).toFixed(2);
+
+document.getElementById("NoProcHazWaste_total_qty").innerText=sum(nonProcessHazQty).toFixed(2);
+document.getElementById("NoProcHazWaste_total_cost").innerText=sum(nonProcessHazCost).toFixed(2);
+
+
+/* ================= TOTAL E-WASTE ================= */
+
+if(grandRow){
+
+months.forEach((m)=>{
+
+let qty=parseFloat(grandRow.querySelector(`.${m}-qty`)?.value||0);
+let cost=parseFloat(grandRow.querySelector(`.${m}-cost`)?.value||0);
+
+document.getElementById(`EWaste_${m}_qty`).innerText=qty.toFixed(2);
+document.getElementById(`EWaste_${m}_cost`).innerText=cost.toFixed(2);
+
+});
+
+}
+
+
+/* ================= GRAND TOTAL WASTE ================= */
+
+let gQty=new Array(12).fill(0);
+let gCost=new Array(12).fill(0);
+
+months.forEach((m,i)=>{
+
+gQty[i]=nonHazQty[i]+hazQty[i];
+gCost[i]=nonHazCost[i]+hazCost[i];
+
+document.getElementById(`GWaste_${m}_qty`).innerText=gQty[i].toFixed(2);
+document.getElementById(`GWaste_${m}_cost`).innerText=gCost[i].toFixed(2);
+
+});
+
+for(let q=0;q<4;q++){
+
+let qQty=gQty[q*3]+gQty[q*3+1]+gQty[q*3+2];
+let qCost=gCost[q*3]+gCost[q*3+1]+gCost[q*3+2];
+
+document.getElementById(`GWaste_q${q+1}_qty`).innerText=qQty.toFixed(2);
+document.getElementById(`GWaste_q${q+1}_cost`).innerText=qCost.toFixed(2);
+
+}
+
+document.getElementById("GWaste_total_qty").innerText=sum(gQty).toFixed(2);
+document.getElementById("GWaste_total_cost").innerText=sum(gCost).toFixed(2);
+
+
+/* ================= DIVERSION RATE ================= */
+
+months.forEach((m,i)=>{
+
+let grand=gQty[i];
+let nonHaz=nonHazQty[i];
+let eWaste=parseFloat(document.getElementById(`EWaste_${m}_qty`)?.innerText||0);
+
+let diversion=0;
+
+if(grand>0){
+diversion=((nonHaz+eWaste)*100)/grand;
+}
+
+document.getElementById(`DivRate_${m}_qty`).innerText=diversion.toFixed(2);
+document.getElementById(`DivRate_${m}_cost`).innerText=diversion.toFixed(2);
+
+});
+
+}
+
+
+/* ================= LIVE UPDATE ================= */
+
+document.addEventListener("input",function(e){
+
+if(
+e.target.classList.contains("qty")||
+e.target.classList.contains("cost")
+){
+calculateTotalsAndSummary();
+}
+
+});
+
+
+window.addEventListener("load",calculateTotalsAndSummary);
+
+</script>
+
+
+<script>
+    let isDataChanged = false;
+
+    /* detect changes in table */
+
+    document.addEventListener("input", function(e){
+
+    if(
+    e.target.classList.contains("qty") ||
+    e.target.classList.contains("cost") ||
+    e.target.classList.contains("part-code")
+    ){
+    isDataChanged = true;
+    }
+
+    });
+
+
+
+    function switchPlant(plantId){
+
+    if(isDataChanged){
+
+    if(!confirm("Switch plant? Any unsaved data will be lost.")){
+    return;
+    }
+
+    }
+
+    window.location.href=url.toString();
+
+    }
+
+
+
+
+    function switchWasteType(type){
+
+    if(isDataChanged){
+
+    if(!confirm("Switch waste type? Any unsaved data will be lost.")){
+    return;
+    }
+
+    }
+
+    const wasteType=document.getElementById("wasteType").value;
+
+    let url=new URL(window.location.href);
+
+    url.searchParams.set("plant_id", plantId);
+    url.searchParams.set("waste_type", wasteType);
+
+    window.location.href=url.toString();
+
+    }
+
+    </script>
+
+
+
+    <script>
+    document.getElementById("saveDataBtn").addEventListener("click", function () {
+
+    const rows=document.querySelectorAll("#rightTable tbody tr");
+
+    const months=[
+    "jan","feb","mar","apr","may","jun",
+    "jul","aug","sep","oct","nov","dec"
+    ];
+
+    const payload=[];
+
+
+    /* ================= MAIN TABLE ================= */
+
+    rows.forEach(row=>{
+
+    const rowName=row.dataset.row;
+
+    if(!rowName) return;
+
+    const qty=months.map(m=>row.querySelector(`.${m}-qty`));
+    const cost=months.map(m=>row.querySelector(`.${m}-cost`));
+
+    if(qty.length!==12) return;
+
+    const data={
+
+    row_name:rowName,
+
+    part_code:row.querySelector(".part-code")?.value || "",
+    treatment:row.querySelector(".treatment")?.value || "",
+
+    jan_qty:parseFloat(qty[0]?.value || 0),
+    feb_qty:parseFloat(qty[1]?.value || 0),
+    mar_qty:parseFloat(qty[2]?.value || 0),
+
+    apr_qty:parseFloat(qty[3]?.value || 0),
+    may_qty:parseFloat(qty[4]?.value || 0),
+    jun_qty:parseFloat(qty[5]?.value || 0),
+
+    jul_qty:parseFloat(qty[6]?.value || 0),
+    aug_qty:parseFloat(qty[7]?.value || 0),
+    sep_qty:parseFloat(qty[8]?.value || 0),
+
+    oct_qty:parseFloat(qty[9]?.value || 0),
+    nov_qty:parseFloat(qty[10]?.value || 0),
+    dec_qty:parseFloat(qty[11]?.value || 0),
+
+    jan_cost:parseFloat(cost[0]?.value || 0),
+    feb_cost:parseFloat(cost[1]?.value || 0),
+    mar_cost:parseFloat(cost[2]?.value || 0),
+
+    apr_cost:parseFloat(cost[3]?.value || 0),
+    may_cost:parseFloat(cost[4]?.value || 0),
+    jun_cost:parseFloat(cost[5]?.value || 0),
+
+    jul_cost:parseFloat(cost[6]?.value || 0),
+    aug_cost:parseFloat(cost[7]?.value || 0),
+    sep_cost:parseFloat(cost[8]?.value || 0),
+
+    oct_cost:parseFloat(cost[9]?.value || 0),
+    nov_cost:parseFloat(cost[10]?.value || 0),
+    dec_cost:parseFloat(cost[11]?.value || 0),
+
+    q1_quantity:parseFloat(row.querySelector(".q1-qty")?.value || 0),
+    q2_quantity:parseFloat(row.querySelector(".q2-qty")?.value || 0),
+    q3_quantity:parseFloat(row.querySelector(".q3-qty")?.value || 0),
+    q4_quantity:parseFloat(row.querySelector(".q4-qty")?.value || 0),
+
+    q1_cost:parseFloat(row.querySelector(".q1-cost")?.value || 0),
+    q2_cost:parseFloat(row.querySelector(".q2-cost")?.value || 0),
+    q3_cost:parseFloat(row.querySelector(".q3-cost")?.value || 0),
+    q4_cost:parseFloat(row.querySelector(".q4-cost")?.value || 0),
+
+    total_quantity:parseFloat(row.querySelector(".total-qty")?.value || 0),
+    total_cost:parseFloat(row.querySelector(".total-cost")?.value || 0)
+
+    };
+
+    payload.push(data);
+
+    });
+
+
+    /* ================= SEND DATA ================= */
+
+    const wasteType=document.getElementById("wasteType").value;
+
+    fetch("{% url 'environmental_mis:save_waste_report' %}",{
+
+    method:"POST",
+
+    headers:{
+    "Content-Type":"application/json",
+    "X-CSRFToken":"{{ csrf_token }}"
+    },
+
+    body:JSON.stringify({
+
+    plant_id:"{{selected_plant.id}}",
+    waste_type:wasteType,
+
+    rows:payload
+
+    })
+
+    })
+
+    .then(res => res.json())
+    .then(data => {
+
+    if(data.status === "success"){
+
+    const msg=document.getElementById("saveMessage");
+
+    msg.style.display="block";
+    msg.innerText="Data saved successfully ✓";
+
+    isDataChanged=false;
+
+    setTimeout(()=>{
+    msg.style.display="none";
+    },3000);
+
+    }
+
+    })
+    });
+</script> {% endcomment %}
 
 
 <script>
 
-function calculateTotals(){
+    /* ================= GLOBAL CONSTANTS ================= */
 
-    const rows = document.querySelectorAll("#rightTable tbody tr");
+    const months=[
+    "jan","feb","mar",
+    "apr","may","jun",
+    "jul","aug","sep",
+    "oct","nov","dec"
+    ];
 
-    const monthCount = 12;
-    const quarterCount = 4;
 
-    let catMonthQty = new Array(monthCount).fill(0);
-    let catMonthCost = new Array(monthCount).fill(0);
+    /* ================= HELPERS ================= */
 
-    let catQuarterQty = new Array(quarterCount).fill(0);
-    let catQuarterCost = new Array(quarterCount).fill(0);
+    function num(v){
+    return parseFloat(v||0);
+    }
 
-    let catTotalQty = 0;
-    let catTotalCost = 0;
+    function sum(arr){
+    return arr.reduce((a,b)=>a+b,0);
+    }
 
-    rows.forEach(row => {
+    function quarterSum(arr,start){
+    return arr[start]+arr[start+1]+arr[start+2];
+    }
 
-        const monthQty = row.querySelectorAll(".month-qty");
-        const monthCost = row.querySelectorAll(".month-cost");
-        const quarterQty = row.querySelectorAll(".quarter-qty");
-        const quarterCost = row.querySelectorAll(".quarter-cost");
 
-        if(monthQty.length !== 12) return;
+    /* ================= ROW CALCULATION ================= */
 
-        if(!row.classList.contains("total-row")){
+    function calculateRow(row,sectionQty,sectionCost,nonHazQty,nonHazCost,hazQty,hazCost,nonProcessHazQty,nonProcessHazCost){
 
-            let rowQty = 0;
-            let rowCost = 0;
+    const waste=row.dataset.waste;
+    const subtype=row.dataset.subtype;
+    const rowKey=row.dataset.row;
 
-            for(let i=0;i<12;i++){
+    const qtyInputs=months.map(m=>row.querySelector(`.${m}-qty`));
+    const costInputs=months.map(m=>row.querySelector(`.${m}-cost`));
 
-                let qty = parseFloat(monthQty[i].value || 0);
-                let cost = parseFloat(monthCost[i].value || 0);
+    if(!qtyInputs[0]) return;
 
-                rowQty += qty;
-                rowCost += cost;
 
-                catMonthQty[i] += qty;
-                catMonthCost[i] += cost;
-            }
+    /* ===== NORMAL ROW ===== */
 
-            // Quarter calculations
-            for(let q=0;q<4;q++){
+    if(!row.classList.contains("total-row-highlight") && rowKey!=="grand_total_e_waste"){
 
-                let qQty = 0;
-                let qCost = 0;
+    let rowQty=0;
+    let rowCost=0;
 
-                for(let m=q*3; m<(q*3)+3; m++){
+    for(let i=0;i<12;i++){
 
-                    qQty += parseFloat(monthQty[m].value || 0);
-                    qCost += parseFloat(monthCost[m].value || 0);
-                }
+    let qty=num(qtyInputs[i]?.value);
+    let cost=num(costInputs[i]?.value);
 
-                if(quarterQty[q]) quarterQty[q].value = qQty.toFixed(2);
-                if(quarterCost[q]) quarterCost[q].value = qCost.toFixed(2);
+    rowQty+=qty;
+    rowCost+=cost;
 
-                catQuarterQty[q] += qQty;
-                catQuarterCost[q] += qCost;
-            }
+    sectionQty[i]+=qty;
+    sectionCost[i]+=cost;
 
-            const totalQty = row.querySelector(".total-qty");
-            const totalCost = row.querySelector(".total-cost");
+    if(waste==="NON_HAZ"){
+    nonHazQty[i]+=qty;
+    nonHazCost[i]+=cost;
+    }
 
-            if(totalQty) totalQty.value = rowQty.toFixed(2);
-            if(totalCost) totalCost.value = rowCost.toFixed(2);
+    if(waste==="HAZ_WASTE"){
+    hazQty[i]+=qty;
+    hazCost[i]+=cost;
+    }
 
-            catTotalQty += rowQty;
-            catTotalCost += rowCost;
+    if(subtype==="NON_PROCESS_HAZ"){
+    nonProcessHazQty[i]+=qty;
+    nonProcessHazCost[i]+=cost;
+    }
 
-        }
-        else{
+    }
 
-            for(let i=0;i<12;i++){
 
-                monthQty[i].value = catMonthQty[i].toFixed(2);
-                monthCost[i].value = catMonthCost[i].toFixed(2);
-            }
+    /* ===== QUARTERS ===== */
 
-            for(let q=0;q<4;q++){
+    for(let q=0;q<4;q++){
 
-                if(quarterQty[q]) quarterQty[q].value = catQuarterQty[q].toFixed(2);
-                if(quarterCost[q]) quarterCost[q].value = catQuarterCost[q].toFixed(2);
-            }
+    let qQty=0;
+    let qCost=0;
 
-            const totalQty = row.querySelector(".total-qty");
-            const totalCost = row.querySelector(".total-cost");
+    for(let m=q*3;m<q*3+3;m++){
 
-            if(totalQty) totalQty.value = catTotalQty.toFixed(2);
-            if(totalCost) totalCost.value = catTotalCost.toFixed(2);
+    qQty+=num(qtyInputs[m]?.value);
+    qCost+=num(costInputs[m]?.value);
 
-            catMonthQty.fill(0);
-            catMonthCost.fill(0);
-            catQuarterQty.fill(0);
-            catQuarterCost.fill(0);
+    }
 
-            catTotalQty = 0;
-            catTotalCost = 0;
-        }
+    row.querySelector(`.q${q+1}-qty`).value=qQty.toFixed(2);
+    row.querySelector(`.q${q+1}-cost`).value=qCost.toFixed(2);
+
+    }
+
+
+    /* ===== TOTAL ===== */
+
+    row.querySelector(".total-qty").value=rowQty.toFixed(2);
+    row.querySelector(".total-cost").value=rowCost.toFixed(2);
+
+    }
+
+
+    /* ===== SECTION TOTAL ROW ===== */
+
+    else if(rowKey!=="grand_total_e_waste"){
+
+    for(let i=0;i<12;i++){
+
+    qtyInputs[i].value=sectionQty[i].toFixed(2);
+    costInputs[i].value=sectionCost[i].toFixed(2);
+
+    }
+
+    for(let q=0;q<4;q++){
+
+    let qQty=quarterSum(sectionQty,q*3);
+    let qCost=quarterSum(sectionCost,q*3);
+
+    row.querySelector(`.q${q+1}-qty`).value=qQty.toFixed(2);
+    row.querySelector(`.q${q+1}-cost`).value=qCost.toFixed(2);
+
+    }
+
+    row.querySelector(".total-qty").value=sum(sectionQty).toFixed(2);
+    row.querySelector(".total-cost").value=sum(sectionCost).toFixed(2);
+
+    sectionQty.fill(0);
+    sectionCost.fill(0);
+
+    }
+
+    }
+
+
+
+    /* ================= E-WASTE GRAND TOTAL ================= */
+
+    function calculateEWaste(){
+
+    const ewasteRow=document.querySelector('[data-row="ewaste_total_quantity"]');
+    const bulbsRow=document.querySelector('[data-row="bulbs_lamps_total_quantity"]');
+    const grandRow=document.querySelector('[data-row="grand_total_e_waste"]');
+
+    if(!ewasteRow||!bulbsRow||!grandRow) return;
+
+
+    /* ===== MONTHLY ===== */
+
+    months.forEach(m=>{
+
+    let ewQty=num(ewasteRow.querySelector(`.${m}-qty`)?.value);
+    let blQty=num(bulbsRow.querySelector(`.${m}-qty`)?.value);
+
+    let ewCost=num(ewasteRow.querySelector(`.${m}-cost`)?.value);
+    let blCost=num(bulbsRow.querySelector(`.${m}-cost`)?.value);
+
+    grandRow.querySelector(`.${m}-qty`).value=(ewQty+blQty).toFixed(2);
+    grandRow.querySelector(`.${m}-cost`).value=(ewCost+blCost).toFixed(2);
 
     });
-}
 
-document.addEventListener("input", function(e){
 
-    if(e.target.classList.contains("month-qty") || 
-       e.target.classList.contains("month-cost")){
+    /* ===== QUARTERS ===== */
 
-        calculateTotals();
+    for(let q=0;q<4;q++){
+
+    let qQty=0;
+    let qCost=0;
+
+    for(let m=q*3;m<q*3+3;m++){
+
+    qQty+=num(grandRow.querySelector(`.${months[m]}-qty`)?.value);
+    qCost+=num(grandRow.querySelector(`.${months[m]}-cost`)?.value);
+
     }
+
+    grandRow.querySelector(`.q${q+1}-qty`).value=qQty.toFixed(2);
+    grandRow.querySelector(`.q${q+1}-cost`).value=qCost.toFixed(2);
+
+    }
+
+
+    /* ===== TOTAL ===== */
+
+    let totalQty=0;
+    let totalCost=0;
+
+    months.forEach(m=>{
+
+    totalQty+=num(grandRow.querySelector(`.${m}-qty`)?.value);
+    totalCost+=num(grandRow.querySelector(`.${m}-cost`)?.value);
+
+    });
+
+    grandRow.querySelector(".total-qty").value=totalQty.toFixed(2);
+    grandRow.querySelector(".total-cost").value=totalCost.toFixed(2);
+
+    }
+
+
+
+    function calculateEWasteSummary(){
+
+        const grandRow=document.querySelector('[data-row="grand_total_e_waste"]');
+
+        if(!grandRow) return;
+
+
+        /* ===== MONTHLY ===== */
+
+        months.forEach(m=>{
+
+        let qty=num(grandRow.querySelector(`.${m}-qty`)?.value);
+        let cost=num(grandRow.querySelector(`.${m}-cost`)?.value);
+
+        document.getElementById(`EWaste_${m}_qty`).innerText=qty.toFixed(2);
+        document.getElementById(`EWaste_${m}_cost`).innerText=cost.toFixed(2);
+
+        });
+
+
+        /* ===== QUARTERS ===== */
+
+        for(let q=0;q<4;q++){
+
+        let qQty=num(grandRow.querySelector(`.q${q+1}-qty`)?.value);
+        let qCost=num(grandRow.querySelector(`.q${q+1}-cost`)?.value);
+
+        document.getElementById(`EWaste_q${q+1}_qty`).innerText=qQty.toFixed(2);
+        document.getElementById(`EWaste_q${q+1}_cost`).innerText=qCost.toFixed(2);
+
+        }
+
+
+        /* ===== TOTAL ===== */
+
+        let totalQty=num(grandRow.querySelector(".total-qty")?.value);
+        let totalCost=num(grandRow.querySelector(".total-cost")?.value);
+
+        document.getElementById("EWaste_total_qty").innerText=totalQty.toFixed(2);
+        document.getElementById("EWaste_total_cost").innerText=totalCost.toFixed(2);
+
+    }
+
+
+    /* ================= SUMMARY ================= */
+
+    function calculateSummary(nonHazQty,nonHazCost,hazQty,hazCost,nonProcessHazQty,nonProcessHazCost){
+
+        /* ================= MONTHLY ================= */
+
+        months.forEach((m,i)=>{
+
+        document.getElementById(`nonhaz_${m}_qty`).innerText=nonHazQty[i].toFixed(2);
+        document.getElementById(`nonhaz_${m}_cost`).innerText=nonHazCost[i].toFixed(2);
+
+        document.getElementById(`hazProc_${m}_qty`).innerText=hazQty[i].toFixed(2);
+        document.getElementById(`hazProc_${m}_cost`).innerText=hazCost[i].toFixed(2);
+
+        document.getElementById(`NoProcHazWaste_${m}_qty`).innerText=nonProcessHazQty[i].toFixed(2);
+        document.getElementById(`NoProcHazWaste_${m}_cost`).innerText=nonProcessHazCost[i].toFixed(2);
+
+        });
+
+
+        /* ================= QUARTERS ================= */
+
+        for(let q=0;q<4;q++){
+
+        let qStart=q*3;
+
+        /* NON HAZ */
+
+        let nhQty=quarterSum(nonHazQty,qStart);
+        let nhCost=quarterSum(nonHazCost,qStart);
+
+        document.getElementById(`nonhaz_q${q+1}_qty`).innerText=nhQty.toFixed(2);
+        document.getElementById(`nonhaz_q${q+1}_cost`).innerText=nhCost.toFixed(2);
+
+
+        /* HAZ PROCESS */
+
+        let hzQty=quarterSum(hazQty,qStart);
+        let hzCost=quarterSum(hazCost,qStart);
+
+        document.getElementById(`hazProc_q${q+1}_qty`).innerText=hzQty.toFixed(2);
+        document.getElementById(`hazProc_q${q+1}_cost`).innerText=hzCost.toFixed(2);
+
+
+        /* NON PROCESS HAZ */
+
+        let nphQty=quarterSum(nonProcessHazQty,qStart);
+        let nphCost=quarterSum(nonProcessHazCost,qStart);
+
+        document.getElementById(`NoProcHazWaste_q${q+1}_qty`).innerText=nphQty.toFixed(2);
+        document.getElementById(`NoProcHazWaste_q${q+1}_cost`).innerText=nphCost.toFixed(2);
+
+        }
+
+
+        /* ================= TOTAL ================= */
+
+        let nonHazTotalQty=sum(nonHazQty);
+        let nonHazTotalCost=sum(nonHazCost);
+
+        document.getElementById("nonhaz_total_qty").innerText=nonHazTotalQty.toFixed(2);
+        document.getElementById("nonhaz_total_cost").innerText=nonHazTotalCost.toFixed(2);
+
+
+        let hazTotalQty=sum(hazQty);
+        let hazTotalCost=sum(hazCost);
+
+        document.getElementById("hazProc_total_qty").innerText=hazTotalQty.toFixed(2);
+        document.getElementById("hazProc_total_cost").innerText=hazTotalCost.toFixed(2);
+
+
+        let nonProcTotalQty=sum(nonProcessHazQty);
+        let nonProcTotalCost=sum(nonProcessHazCost);
+
+        document.getElementById("NoProcHazWaste_total_qty").innerText=nonProcTotalQty.toFixed(2);
+        document.getElementById("NoProcHazWaste_total_cost").innerText=nonProcTotalCost.toFixed(2);
+
+        }
+
+
+
+    /* ================= MAIN ENGINE ================= */
+
+    function calculateTotalsAndSummary(){
+
+    const rows=document.querySelectorAll("#rightTable tbody tr");
+
+    let sectionQty=new Array(12).fill(0);
+    let sectionCost=new Array(12).fill(0);
+
+    let nonHazQty=new Array(12).fill(0);
+    let nonHazCost=new Array(12).fill(0);
+
+    let hazQty=new Array(12).fill(0);
+    let hazCost=new Array(12).fill(0);
+
+    let nonProcessHazQty=new Array(12).fill(0);
+    let nonProcessHazCost=new Array(12).fill(0);
+
+
+    rows.forEach(row=>{
+
+    calculateRow(
+    row,
+    sectionQty,
+    sectionCost,
+    nonHazQty,
+    nonHazCost,
+    hazQty,
+    hazCost,
+    nonProcessHazQty,
+    nonProcessHazCost
+    );
+
+    });
+
+    calculateEWaste();
+    calculateCustomTotals(); 
+    calculateOilGreaseTotal();
+    calculateSummary(
+    nonHazQty,
+    nonHazCost,
+    hazQty,
+    hazCost,
+    nonProcessHazQty,
+    nonProcessHazCost
+    );
+    calculateEWasteSummary();
+    calculateGrandWaste();
+    calculateDiversionRate();
+    calculateNonHazPerUnit();
+    calculateProcHazPerUnit();
+    }
+
+
+
+    /* ================= LIVE CALCULATION ================= */
+
+    document.addEventListener("input",function(e){
+
+    if(
+    e.target.classList.contains("qty") ||
+    e.target.classList.contains("cost")
+    ){
+    calculateTotalsAndSummary();
+    }
+
+    });
+
+    window.addEventListener("load",calculateTotalsAndSummary);
+
+</script>
+
+<script>
+
+    {% comment %} /* ================= SAVE REPORT ================= */
+
+    function collectTableData(){
+
+        const rows=document.querySelectorAll("#rightTable tbody tr");
+
+        const months=[
+        "jan","feb","mar","apr","may","jun",
+        "jul","aug","sep","oct","nov","dec"
+        ];
+
+        const payload=[];
+
+        rows.forEach(row=>{
+
+        const rowName=row.dataset.row;
+
+        if(!rowName) return;
+
+        const qty=months.map(m=>row.querySelector(`.${m}-qty`));
+        const cost=months.map(m=>row.querySelector(`.${m}-cost`));
+
+        if(qty.length!==12) return;
+
+        const data={
+
+        row_name:rowName,
+
+        part_code:row.querySelector(".part-code")?.value || "",
+        treatment:row.querySelector(".treatment")?.value || "",
+
+        jan_qty:num(qty[0]?.value),
+        feb_qty:num(qty[1]?.value),
+        mar_qty:num(qty[2]?.value),
+
+        apr_qty:num(qty[3]?.value),
+        may_qty:num(qty[4]?.value),
+        jun_qty:num(qty[5]?.value),
+
+        jul_qty:num(qty[6]?.value),
+        aug_qty:num(qty[7]?.value),
+        sep_qty:num(qty[8]?.value),
+
+        oct_qty:num(qty[9]?.value),
+        nov_qty:num(qty[10]?.value),
+        dec_qty:num(qty[11]?.value),
+
+        jan_cost:num(cost[0]?.value),
+        feb_cost:num(cost[1]?.value),
+        mar_cost:num(cost[2]?.value),
+
+        apr_cost:num(cost[3]?.value),
+        may_cost:num(cost[4]?.value),
+        jun_cost:num(cost[5]?.value),
+
+        jul_cost:num(cost[6]?.value),
+        aug_cost:num(cost[7]?.value),
+        sep_cost:num(cost[8]?.value),
+
+        oct_cost:num(cost[9]?.value),
+        nov_cost:num(cost[10]?.value),
+        dec_cost:num(cost[11]?.value),
+
+        q1_quantity:num(row.querySelector(".q1-qty")?.value),
+        q2_quantity:num(row.querySelector(".q2-qty")?.value),
+        q3_quantity:num(row.querySelector(".q3-qty")?.value),
+        q4_quantity:num(row.querySelector(".q4-qty")?.value),
+
+        q1_cost:num(row.querySelector(".q1-cost")?.value),
+        q2_cost:num(row.querySelector(".q2-cost")?.value),
+        q3_cost:num(row.querySelector(".q3-cost")?.value),
+        q4_cost:num(row.querySelector(".q4-cost")?.value),
+
+        total_quantity:num(row.querySelector(".total-qty")?.value),
+        total_cost:num(row.querySelector(".total-cost")?.value)
+
+        };
+
+        payload.push(data);
+
+        });
+
+        return payload;
+
+    }
+
+
+    function collectSummaryData(){
+
+        const summaryTypes=[
+        "NON_HAZ",
+        "HAZ_PROCESS",
+        "E_WASTE",
+        "GRAND_WASTE",
+        "PRODUCTION",
+        "NON_HAZ_UNIT",
+        "PROC_HAZ_UNIT",
+        "NON_PROC_HAZ",
+        "DIVERSION_RATE"
+        ];
+
+        const summary=[];
+
+        summaryTypes.forEach(type=>{
+
+        let data={
+        summary_type:type
+        };
+
+        months.forEach(m=>{
+
+        data[`${m}_qty`]=parseFloat(
+        document.getElementById(`${type}_${m}_qty`)?.innerText || 0
+        );
+
+        data[`${m}_cost`]=parseFloat(
+        document.getElementById(`${type}_${m}_cost`)?.innerText || 0
+        );
+
+        });
+
+        data.q1_quantity=parseFloat(document.getElementById(`${type}_q1_qty`)?.innerText||0);
+        data.q2_quantity=parseFloat(document.getElementById(`${type}_q2_qty`)?.innerText||0);
+        data.q3_quantity=parseFloat(document.getElementById(`${type}_q3_qty`)?.innerText||0);
+        data.q4_quantity=parseFloat(document.getElementById(`${type}_q4_qty`)?.innerText||0);
+
+        data.q1_cost=parseFloat(document.getElementById(`${type}_q1_cost`)?.innerText||0);
+        data.q2_cost=parseFloat(document.getElementById(`${type}_q2_cost`)?.innerText||0);
+        data.q3_cost=parseFloat(document.getElementById(`${type}_q3_cost`)?.innerText||0);
+        data.q4_cost=parseFloat(document.getElementById(`${type}_q4_cost`)?.innerText||0);
+
+        data.total_quantity=parseFloat(document.getElementById(`${type}_total_qty`)?.innerText||0);
+        data.total_cost=parseFloat(document.getElementById(`${type}_total_cost`)?.innerText||0);
+
+        summary.push(data);
+
+        });
+
+        return summary;
+
+    }
+
+
+    /* ================= SEND TO DJANGO ================= */
+
+    function saveWasteReport(){
+
+        const payload=collectTableData();
+        const summaryData=collectSummaryData();
+
+        const wasteType=document.getElementById("wasteType").value;
+
+        fetch("{% url 'environmental_mis:save_waste_report' %}",{
+
+        method:"POST",
+
+        headers:{
+        "Content-Type":"application/json",
+        "X-CSRFToken":"{{ csrf_token }}"
+        },
+
+        body:JSON.stringify({
+
+        plant_id:"{{selected_plant.id}}",
+        waste_type:wasteType,
+        rows:payload,
+        summary:summaryData
+
+        })
+
+        })
+        .then(res=>res.json())
+        .then(data=>{
+
+        if(data.status==="success"){
+
+        const msg=document.getElementById("saveMessage");
+
+        msg.style.display="block";
+        msg.innerText="Data saved successfully ✓";
+
+        isDataChanged=false;
+
+        setTimeout(()=>{
+        msg.style.display="none";
+        },3000);
+
+        }
+
+        });
+
+    }
+
+
+
+    /* ================= SAVE BUTTON ================= */
+
+    document.getElementById("saveDataBtn").addEventListener("click", saveWasteReport); {% endcomment %}
+
+
+    document.getElementById("saveDataBtn").addEventListener("click", function () {
+
+const rows = document.querySelectorAll("#rightTable tbody tr");
+
+const months = [
+"jan","feb","mar","apr","may","jun",
+"jul","aug","sep","oct","nov","dec"
+];
+
+const payload = [];
+
+/* ================= MAIN TABLE ================= */
+
+rows.forEach(row => {
+
+const rowName = row.dataset.row;
+if(!rowName) return;
+
+const qty = months.map(m => row.querySelector(`.${m}-qty`));
+const cost = months.map(m => row.querySelector(`.${m}-cost`));
+
+if(qty.length !== 12) return;
+
+const data = {
+
+row_name: rowName,
+
+part_code: row.querySelector(".part-code")?.value || "",
+treatment: row.querySelector(".treatment")?.value || "",
+
+};
+
+months.forEach((m,i)=>{
+
+data[`${m}_qty`] = parseFloat(qty[i]?.value || 0);
+data[`${m}_cost`] = parseFloat(cost[i]?.value || 0);
 
 });
 
-window.addEventListener("load", calculateTotals);
+data.q1_quantity = parseFloat(row.querySelector(".q1-qty")?.value || 0);
+data.q2_quantity = parseFloat(row.querySelector(".q2-qty")?.value || 0);
+data.q3_quantity = parseFloat(row.querySelector(".q3-qty")?.value || 0);
+data.q4_quantity = parseFloat(row.querySelector(".q4-qty")?.value || 0);
+
+data.q1_cost = parseFloat(row.querySelector(".q1-cost")?.value || 0);
+data.q2_cost = parseFloat(row.querySelector(".q2-cost")?.value || 0);
+data.q3_cost = parseFloat(row.querySelector(".q3-cost")?.value || 0);
+data.q4_cost = parseFloat(row.querySelector(".q4-cost")?.value || 0);
+
+data.total_quantity = parseFloat(row.querySelector(".total-qty")?.value || 0);
+data.total_cost = parseFloat(row.querySelector(".total-cost")?.value || 0);
+
+payload.push(data);
+
+});
+
+
+/* ================= SUMMARY TABLE ================= */
+
+function getSummary(prefix){
+
+const obj={};
+
+months.forEach(m=>{
+
+obj[`${m}_qty`] = parseFloat(document.getElementById(`${prefix}_${m}_qty`)?.innerText || 0);
+obj[`${m}_cost`] = parseFloat(document.getElementById(`${prefix}_${m}_cost`)?.innerText || 0);
+
+});
+
+obj.q1_quantity = parseFloat(document.getElementById(`${prefix}_q1_qty`)?.innerText || 0);
+obj.q2_quantity = parseFloat(document.getElementById(`${prefix}_q2_qty`)?.innerText || 0);
+obj.q3_quantity = parseFloat(document.getElementById(`${prefix}_q3_qty`)?.innerText || 0);
+obj.q4_quantity = parseFloat(document.getElementById(`${prefix}_q4_qty`)?.innerText || 0);
+
+obj.q1_cost = parseFloat(document.getElementById(`${prefix}_q1_cost`)?.innerText || 0);
+obj.q2_cost = parseFloat(document.getElementById(`${prefix}_q2_cost`)?.innerText || 0);
+obj.q3_cost = parseFloat(document.getElementById(`${prefix}_q3_cost`)?.innerText || 0);
+obj.q4_cost = parseFloat(document.getElementById(`${prefix}_q4_cost`)?.innerText || 0);
+
+obj.total_quantity = parseFloat(document.getElementById(`${prefix}_total_qty`)?.innerText || 0);
+obj.total_cost = parseFloat(document.getElementById(`${prefix}_total_cost`)?.innerText || 0);
+
+return obj;
+
+}
+
+const summaryPayload=[
+
+{summary_type:"NON_HAZ",...getSummary("nonhaz")},
+{summary_type:"HAZ_PROCESS",...getSummary("hazProc")},
+{summary_type:"E_WASTE",...getSummary("EWaste")},
+{summary_type:"GRAND_WASTE",...getSummary("GWaste")},
+{summary_type:"PRODUCTION",...getSummary("ProdMonth")},
+{summary_type:"NON_HAZ_UNIT",...getSummary("NonHazWaste")},
+{summary_type:"PROC_HAZ_UNIT",...getSummary("ProcHazWaste")},
+{summary_type:"NON_PROC_HAZ",...getSummary("NoProcHazWaste")},
+{summary_type:"DIVERSION_RATE",...getSummary("DivRate")}
+
+];
+
+
+/* ================= SEND DATA ================= */
+
+fetch("{% url 'environmental_mis:save_waste_report' %}?plant_id={{selected_plant.id}}&type={{selected_type}}",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json",
+"X-CSRFToken":"{{ csrf_token }}"
+},
+
+body:JSON.stringify({
+
+rows:payload,
+summary:summaryPayload
+
+})
+
+})
+
+.then(res=>res.json())
+
+.then(data=>{
+
+if(data.status==="success"){
+
+alert("Report saved successfully");
+location.reload();
+
+}
+
+})
+
+.catch(err=>console.log(err));
+
+});
 
 </script>
 
 
 <script>
 
-document.getElementById("saveDataBtn").addEventListener("click", function(){
+    let isDataChanged = false;
 
-    const rows = document.querySelectorAll("#rightTable tbody tr");
 
-    const payload = [];
+    /* ================= DETECT CHANGES ================= */
 
-    rows.forEach(row => {
+    document.addEventListener("input", function(e){
 
-        if(row.classList.contains("total-row")) return;
-
-        const config = row.dataset.config;
-
-        if(!config || config === "None") return;
-
-        const qty = row.querySelectorAll(".month-qty");
-        const cost = row.querySelectorAll(".month-cost");
-
-        if(qty.length !== 12 || cost.length !== 12) return;
-
-        const partCode = row.querySelector(".part-code")?.value || "";
-        const treatment = row.querySelector(".treatment")?.value || "";
-
-        let totalQty = 0;
-
-        qty.forEach(q => {
-            totalQty += parseFloat(q.value || 0);
-        });
-
-        if(totalQty === 0 && partCode === "" && treatment === ""){
-            return;
-        }
-
-        payload.push({
-
-            config_id: config,
-
-            part_code: partCode,
-            treatment: treatment,
-
-            jan_qty: parseFloat(qty[0].value || 0),
-            feb_qty: parseFloat(qty[1].value || 0),
-            mar_qty: parseFloat(qty[2].value || 0),
-
-            apr_qty: parseFloat(qty[3].value || 0),
-            may_qty: parseFloat(qty[4].value || 0),
-            jun_qty: parseFloat(qty[5].value || 0),
-
-            jul_qty: parseFloat(qty[6].value || 0),
-            aug_qty: parseFloat(qty[7].value || 0),
-            sep_qty: parseFloat(qty[8].value || 0),
-
-            oct_qty: parseFloat(qty[9].value || 0),
-            nov_qty: parseFloat(qty[10].value || 0),
-            dec_qty: parseFloat(qty[11].value || 0),
-
-            jan_cost: parseFloat(cost[0].value || 0),
-            feb_cost: parseFloat(cost[1].value || 0),
-            mar_cost: parseFloat(cost[2].value || 0),
-
-            apr_cost: parseFloat(cost[3].value || 0),
-            may_cost: parseFloat(cost[4].value || 0),
-            jun_cost: parseFloat(cost[5].value || 0),
-
-            jul_cost: parseFloat(cost[6].value || 0),
-            aug_cost: parseFloat(cost[7].value || 0),
-            sep_cost: parseFloat(cost[8].value || 0),
-
-            oct_cost: parseFloat(cost[9].value || 0),
-            nov_cost: parseFloat(cost[10].value || 0),
-            dec_cost: parseFloat(cost[11].value || 0)
-
-        });
-
-    });
-
-    if(payload.length === 0){
-
-        alert("No data to save.");
-        return;
+    if(
+    e.target.classList.contains("qty") ||
+    e.target.classList.contains("cost") ||
+    e.target.classList.contains("part-code")
+    ){
+    isDataChanged = true;
     }
 
-    fetch("{% url 'environmental_mis:save_manufacturing_waste' %}", {
-
-        method: "POST",
-
-        headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
-        },
-
-        body: JSON.stringify(payload)
-
-    })
-    .then(res => res.json())
-    .then(data => {
-
-        if(data.status === "success"){
-
-            alert("Data added successfully");
-            location.reload();
-
-        }else{
-
-            alert("Error saving data");
-        }
-
-    })
-    .catch(err => {
-
-        console.error(err);
-        alert("Something went wrong while saving.");
-
     });
 
-});
+
+    /* ================= SWITCH PLANT ================= */
+
+    function switchPlant(plantId){
+
+        if(isDataChanged){
+
+        if(!confirm("Switch plant? Any unsaved data will be lost.")){
+        return;
+        }
+
+        }
+
+        let url = new URL(window.location.href);
+
+        url.searchParams.set("plant_id", plantId);
+
+        window.location.href = url.toString();
+
+    }
+
+
+    /* ================= SWITCH WASTE TYPE ================= */
+
+    function switchWasteType(){
+
+        if(isDataChanged){
+
+        if(!confirm("Switch waste type? Any unsaved data will be lost.")){
+        return;
+        }
+
+        }
+
+        const wasteType = document.getElementById("wasteType").value;
+
+        let url = new URL(window.location.href);
+
+        url.searchParams.set("waste_type", wasteType);
+
+        window.location.href = url.toString();
+
+    }
+
+
+
+    function calculateCustomTotals(){
+
+        const asbestosRow=document.querySelector('[data-row="asbestos"]');
+        const glassRow=document.querySelector('[data-row="glass_wool"]');
+        const totalRow=document.querySelector('[data-row="asbestos_total_quantity"]');
+
+        if(!asbestosRow || !glassRow || !totalRow) return;
+
+        months.forEach(m=>{
+
+        let aQty=num(asbestosRow.querySelector(`.${m}-qty`)?.value);
+        let gQty=num(glassRow.querySelector(`.${m}-qty`)?.value);
+
+        let aCost=num(asbestosRow.querySelector(`.${m}-cost`)?.value);
+        let gCost=num(glassRow.querySelector(`.${m}-cost`)?.value);
+
+        totalRow.querySelector(`.${m}-qty`).value=(aQty+gQty).toFixed(2);
+        totalRow.querySelector(`.${m}-cost`).value=(aCost+gCost).toFixed(2);
+
+        });
+
+
+        /* ===== QUARTERS ===== */
+
+        for(let q=0;q<4;q++){
+
+        let qQty=0;
+        let qCost=0;
+
+        for(let m=q*3;m<q*3+3;m++){
+
+        qQty+=num(totalRow.querySelector(`.${months[m]}-qty`)?.value);
+        qCost+=num(totalRow.querySelector(`.${months[m]}-cost`)?.value);
+
+        }
+
+        totalRow.querySelector(`.q${q+1}-qty`).value=qQty.toFixed(2);
+        totalRow.querySelector(`.q${q+1}-cost`).value=qCost.toFixed(2);
+
+        }
+
+
+        /* ===== TOTAL ===== */
+
+        let totalQty=0;
+        let totalCost=0;
+
+        months.forEach(m=>{
+
+        totalQty+=num(totalRow.querySelector(`.${m}-qty`)?.value);
+        totalCost+=num(totalRow.querySelector(`.${m}-cost`)?.value);
+
+        });
+
+        totalRow.querySelector(".total-qty").value=totalQty.toFixed(2);
+        totalRow.querySelector(".total-cost").value=totalCost.toFixed(2);
+
+    }
+
+
+
+    function calculateOilGreaseTotal(){
+
+        const oilRow=document.querySelector('[data-row="used_waste_oil_grease"]');
+        const sludgeRow=document.querySelector('[data-row="oily_sludge"]');
+        const totalRow=document.querySelector('[data-row="oil_grease_total_quantity"]');
+
+        if(!oilRow || !sludgeRow || !totalRow) return;
+
+        months.forEach(m=>{
+
+        let oQty=num(oilRow.querySelector(`.${m}-qty`)?.value);
+        let sQty=num(sludgeRow.querySelector(`.${m}-qty`)?.value);
+
+        let oCost=num(oilRow.querySelector(`.${m}-cost`)?.value);
+        let sCost=num(sludgeRow.querySelector(`.${m}-cost`)?.value);
+
+        totalRow.querySelector(`.${m}-qty`).value=(oQty+sQty).toFixed(2);
+        totalRow.querySelector(`.${m}-cost`).value=(oCost+sCost).toFixed(2);
+
+        });
+
+
+        /* ===== QUARTERS ===== */
+
+        for(let q=0;q<4;q++){
+
+        let qQty=0;
+        let qCost=0;
+
+        for(let m=q*3;m<q*3+3;m++){
+
+        qQty+=num(totalRow.querySelector(`.${months[m]}-qty`)?.value);
+        qCost+=num(totalRow.querySelector(`.${months[m]}-cost`)?.value);
+
+        }
+
+        totalRow.querySelector(`.q${q+1}-qty`).value=qQty.toFixed(2);
+        totalRow.querySelector(`.q${q+1}-cost`).value=qCost.toFixed(2);
+
+        }
+
+
+        /* ===== TOTAL ===== */
+
+        let totalQty=0;
+        let totalCost=0;
+
+        months.forEach(m=>{
+
+        totalQty+=num(totalRow.querySelector(`.${m}-qty`)?.value);
+        totalCost+=num(totalRow.querySelector(`.${m}-cost`)?.value);
+
+        });
+
+        totalRow.querySelector(".total-qty").value=totalQty.toFixed(2);
+        totalRow.querySelector(".total-cost").value=totalCost.toFixed(2);
+
+    }
+
+
+    function calculateGrandWaste(){
+
+        months.forEach((m)=>{
+
+        let nonHazQty=num(document.getElementById(`nonhaz_${m}_qty`)?.innerText);
+        let nonHazCost=num(document.getElementById(`nonhaz_${m}_cost`)?.innerText);
+
+        let hazQty=num(document.getElementById(`hazProc_${m}_qty`)?.innerText);
+        let hazCost=num(document.getElementById(`hazProc_${m}_cost`)?.innerText);
+
+        let totalQty=nonHazQty+hazQty;
+        let totalCost=nonHazCost+hazCost;
+
+        document.getElementById(`GWaste_${m}_qty`).innerText=totalQty.toFixed(2);
+        document.getElementById(`GWaste_${m}_cost`).innerText=totalCost.toFixed(2);
+
+        });
+
+
+        /* ===== QUARTERS ===== */
+
+        for(let q=0;q<4;q++){
+
+        let qQty=0;
+        let qCost=0;
+
+        for(let m=q*3;m<q*3+3;m++){
+
+        let month=months[m];
+
+        qQty+=num(document.getElementById(`GWaste_${month}_qty`)?.innerText);
+        qCost+=num(document.getElementById(`GWaste_${month}_cost`)?.innerText);
+
+        }
+
+        document.getElementById(`GWaste_q${q+1}_qty`).innerText=qQty.toFixed(2);
+        document.getElementById(`GWaste_q${q+1}_cost`).innerText=qCost.toFixed(2);
+
+        }
+
+
+        /* ===== TOTAL ===== */
+
+        let totalQty=0;
+        let totalCost=0;
+
+        months.forEach((m)=>{
+
+        totalQty+=num(document.getElementById(`GWaste_${m}_qty`)?.innerText);
+        totalCost+=num(document.getElementById(`GWaste_${m}_cost`)?.innerText);
+
+        });
+
+        document.getElementById("GWaste_total_qty").innerText=totalQty.toFixed(2);
+        document.getElementById("GWaste_total_cost").innerText=totalCost.toFixed(2);
+
+    }
+
+
+    function calculateDiversionRate(){
+
+        /* ===== MONTHLY ===== */
+
+        months.forEach((m)=>{
+
+        let nonHazQty=num(document.getElementById(`nonhaz_${m}_qty`)?.innerText);
+        let ewasteQty=num(document.getElementById(`EWaste_${m}_qty`)?.innerText);
+        let grandQty=num(document.getElementById(`GWaste_${m}_qty`)?.innerText);
+
+        let nonHazCost=num(document.getElementById(`nonhaz_${m}_cost`)?.innerText);
+        let ewasteCost=num(document.getElementById(`EWaste_${m}_cost`)?.innerText);
+        let grandCost=num(document.getElementById(`GWaste_${m}_cost`)?.innerText);
+
+        let rateQty=0;
+        let rateCost=0;
+
+        if(grandQty>0){
+        rateQty=((nonHazQty+ewasteQty)*100)/grandQty;
+        }
+
+        if(grandCost>0){
+        rateCost=((nonHazCost+ewasteCost)*100)/grandCost;
+        }
+
+        document.getElementById(`DivRate_${m}_qty`).innerText=rateQty.toFixed(2);
+        document.getElementById(`DivRate_${m}_cost`).innerText=rateCost.toFixed(2);
+
+        });
+
+
+        /* ===== QUARTERS ===== */
+
+        for(let q=1;q<=4;q++){
+
+        let nonHazQty=num(document.getElementById(`nonhaz_q${q}_qty`)?.innerText);
+        let ewasteQty=num(document.getElementById(`EWaste_q${q}_qty`)?.innerText);
+        let grandQty=num(document.getElementById(`GWaste_q${q}_qty`)?.innerText);
+
+        let nonHazCost=num(document.getElementById(`nonhaz_q${q}_cost`)?.innerText);
+        let ewasteCost=num(document.getElementById(`EWaste_q${q}_cost`)?.innerText);
+        let grandCost=num(document.getElementById(`GWaste_q${q}_cost`)?.innerText);
+
+        let rateQty=0;
+        let rateCost=0;
+
+        if(grandQty>0){
+        rateQty=((nonHazQty+ewasteQty)*100)/grandQty;
+        }
+
+        if(grandCost>0){
+        rateCost=((nonHazCost+ewasteCost)*100)/grandCost;
+        }
+
+        document.getElementById(`DivRate_q${q}_qty`).innerText=rateQty.toFixed(2);
+        document.getElementById(`DivRate_q${q}_cost`).innerText=rateCost.toFixed(2);
+
+        }
+
+
+        /* ===== TOTAL ===== */
+
+        let nonHazTotalQty=num(document.getElementById("nonhaz_total_qty")?.innerText);
+        let ewasteTotalQty=num(document.getElementById("EWaste_total_qty")?.innerText);
+        let grandTotalQty=num(document.getElementById("GWaste_total_qty")?.innerText);
+
+        let nonHazTotalCost=num(document.getElementById("nonhaz_total_cost")?.innerText);
+        let ewasteTotalCost=num(document.getElementById("EWaste_total_cost")?.innerText);
+        let grandTotalCost=num(document.getElementById("GWaste_total_cost")?.innerText);
+
+        let totalRateQty=0;
+        let totalRateCost=0;
+
+        if(grandTotalQty>0){
+        totalRateQty=((nonHazTotalQty+ewasteTotalQty)*100)/grandTotalQty;
+        }
+
+        if(grandTotalCost>0){
+        totalRateCost=((nonHazTotalCost+ewasteTotalCost)*100)/grandTotalCost;
+        }
+
+        document.getElementById("DivRate_total_qty").innerText=totalRateQty.toFixed(2);
+        document.getElementById("DivRate_total_cost").innerText=totalRateCost.toFixed(2);
+
+        }
+
+
+    function calculateNonHazPerUnit(){
+
+        months.forEach((m)=>{
+
+        let waste=num(document.getElementById(`nonhaz_${m}_qty`)?.innerText);
+        let production=num(document.getElementById(`ProdMonth_${m}_qty`)?.innerText);
+
+        let result=0;
+
+        if(production>0){
+        result=waste/production;
+        }
+
+        document.getElementById(`NonHazWaste_${m}_qty`).innerText=result.toFixed(2);
+        document.getElementById(`NonHazWaste_${m}_cost`).innerText="";
+
+        });
+
+
+        /* ===== QUARTERS ===== */
+
+        for(let q=1;q<=4;q++){
+
+        let waste=num(document.getElementById(`nonhaz_q${q}_qty`)?.innerText);
+        let production=num(document.getElementById(`ProdMonth_q${q}_qty`)?.innerText);
+
+        let result=0;
+
+        if(production>0){
+        result=waste/production;
+        }
+
+        document.getElementById(`NonHazWaste_q${q}_qty`).innerText=result.toFixed(2);
+        document.getElementById(`NonHazWaste_q${q}_cost`).innerText="";
+
+        }
+
+
+        /* ===== TOTAL ===== */
+
+        let waste=num(document.getElementById("nonhaz_total_qty")?.innerText);
+        let production=num(document.getElementById("ProdMonth_total_qty")?.innerText);
+
+        let result=0;
+
+        if(production>0){
+        result=waste/production;
+        }
+
+        document.getElementById("NonHazWaste_total_qty").innerText=result.toFixed(2);
+        document.getElementById("NonHazWaste_total_cost").innerText="";
+
+    }
+
+
+    function calculateProcHazPerUnit(){
+
+        /* ===== MONTHLY ===== */
+
+        months.forEach((m)=>{
+
+        let waste = num(document.getElementById(`hazProc_${m}_qty`)?.innerText);
+        let production = num(document.getElementById(`ProdMonth_${m}_qty`)?.innerText);
+
+        let result = 0;
+
+        if(production > 0){
+        result = waste / production;
+        }
+
+        document.getElementById(`ProcHazWaste_${m}_qty`).innerText = result.toFixed(2);
+        document.getElementById(`ProcHazWaste_${m}_cost`).innerText = "";
+
+        });
+
+
+        /* ===== QUARTERS ===== */
+
+        for(let q=1;q<=4;q++){
+
+        let waste = num(document.getElementById(`hazProc_q${q}_qty`)?.innerText);
+        let production = num(document.getElementById(`ProdMonth_q${q}_qty`)?.innerText);
+
+        let result = 0;
+
+        if(production > 0){
+        result = waste / production;
+        }
+
+        document.getElementById(`ProcHazWaste_q${q}_qty`).innerText = result.toFixed(2);
+        document.getElementById(`ProcHazWaste_q${q}_cost`).innerText = "";
+
+        }
+
+
+        /* ===== TOTAL ===== */
+
+        let waste = num(document.getElementById("hazProc_total_qty")?.innerText);
+        let production = num(document.getElementById("ProdMonth_total_qty")?.innerText);
+
+        let result = 0;
+
+        if(production > 0){
+        result = waste / production;
+        }
+
+        document.getElementById("ProcHazWaste_total_qty").innerText = result.toFixed(2);
+        document.getElementById("ProcHazWaste_total_cost").innerText = "";
+
+    }
 
 </script>
 

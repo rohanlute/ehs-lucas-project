@@ -1,1041 +1,775 @@
-from decimal import Decimal, InvalidOperation
+import json
 
-from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-from django.core.paginator import Paginator
-from django.db.models import Q
-from django.db import transaction
-
-from apps.organizations.models import Plant
-from apps.ENVdata.models import Unit
-
-from .models import (
-    BusinessType,
-    Domain,
-    Category,
-    EnvironmentalMISQuarterlyData,
-    SubCategory,
-)
-
-from .permissions import env_module_required, admin_env_required
-
-
-# =========================================================
-# BUSINESS TYPE
-# =========================================================
-
-@env_module_required
-def business_type_list(request):
-    # if not (request.user.is_superuser or request.user.is_staff or getattr(request.user, 'is_admin_user', False)):
-    #     messages.error(request, "You don't have permission to access this page")
-    #     return redirect("environmental_mis:business-types")
-    
-    search = request.GET.get("search", "")
-
-    queryset = BusinessType.objects.all().order_by("name")
-
-    if search:
-        queryset = queryset.filter(
-            Q(name__icontains=search) |
-            Q(description__icontains=search)
-        )
-
-    paginator = Paginator(queryset, 10)
-    page_obj = paginator.get_page(request.GET.get("page"))
-
-    return render(
-        request,
-        "environmental_mis/business_type_list.html",
-        {
-            "page_obj": page_obj,
-            "search": search,
-        }
-    )
-
-
-@env_module_required
-@admin_env_required
-def business_type_create(request):
-
-    if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        description = request.POST.get("description", "").strip()
-        is_active = request.POST.get("is_active") == "on"
-
-        if not name:
-            messages.error(request, "Name is required.")
-            return redirect("environmental_mis:business_type_create")
-
-        if BusinessType.objects.filter(name__iexact=name).exists():
-            messages.error(request, "Business Type already exists.")
-            return redirect("environmental_mis:business_type_create")
-
-        BusinessType.objects.create(
-            name=name,
-            description=description,
-            is_active=is_active,
-            created_by=request.user
-        )
-
-        messages.success(request, "Business Type created successfully.")
-        return redirect("environmental_mis:business_type_list")
-
-    return render(request, "environmental_mis/business_type_form.html")
-
-
-@env_module_required
-@admin_env_required
-def business_type_edit(request, pk):
-
-    obj = get_object_or_404(BusinessType, pk=pk)
-
-    if request.method == "POST":
-        name = request.POST.get("name", "").strip()
-        description = request.POST.get("description", "").strip()
-        is_active = request.POST.get("is_active") == "on"
-
-        if not name:
-            messages.error(request, "Name is required.")
-            return redirect("environmental_mis:business_type_edit", pk=pk)
-
-        if BusinessType.objects.exclude(pk=pk).filter(name__iexact=name).exists():
-            messages.error(request, "Business Type already exists.")
-            return redirect("environmental_mis:business_type_edit", pk=pk)
-
-        obj.name = name
-        obj.description = description
-        obj.is_active = is_active
-        obj.save()
-
-        messages.success(request, "Business Type updated successfully.")
-        return redirect("environmental_mis:business_type_list")
-
-    return render(
-        request,
-        "environmental_mis/business_type_form.html",
-        {"obj": obj}
-    )
-
-
-@env_module_required
-@admin_env_required
-def business_type_delete(request, pk):
-    obj = get_object_or_404(BusinessType, pk=pk)
-    obj.delete()
-    messages.success(request, "Business Type deleted successfully.")
-    return redirect("environmental_mis:business_type_list")
-
-
-# =========================================================
-# CONFIGURATION
-# =========================================================
-
-@env_module_required
-@admin_env_required
-def configuration_list(request):
-
-    categories = Category.objects.select_related(
-        "domain",
-        "domain__business_type",
-    ).prefetch_related(
-        "subcategories"
-    ).order_by(
-        "domain__business_type__name",
-        "domain__name",
-        "name"
-    )
-
-    return render(
-        request,
-        "environmental_mis/configuration_list.html",
-        {"categories": categories}
-    )
-
-@env_module_required
-@admin_env_required
-def configuration_flow(request):
-
-    business_types = BusinessType.objects.filter(is_active=True)
-    print("business_types",business_types)
-
-    if request.method == "POST":
-
-        business_type_id = request.POST.get("business_type")
-        domain_name = request.POST.get("domain_name", "").strip()
-
-        if not business_type_id or not domain_name:
-            messages.error(request, "Business Type and Domain are required.")
-            return redirect("environmental_mis:configuration_flow")
-
-        business_type = get_object_or_404(
-            BusinessType,
-            id=business_type_id,
-            is_active=True
-        )
-
-        try:
-            with transaction.atomic():
-
-                # ===============================
-                # CREATE / GET DOMAIN
-                # ===============================
-                domain, _ = Domain.objects.get_or_create(
-                    business_type=business_type,
-                    name=domain_name
-                )
-
-                category_count = int(request.POST.get("category_count", 0))
-
-                if category_count == 0:
-                    raise Exception("At least one Category is required.")
-
-                # ===============================
-                # LOOP CATEGORIES
-                # ===============================
-                for i in range(category_count):
-
-                    category_name = request.POST.get(
-                        f"category_name_{i}", ""
-                    ).strip()
-
-                    if not category_name:
-                        raise Exception("Category name cannot be empty.")
-
-                    category, _ = Category.objects.get_or_create(
-                        domain=domain,
-                        name=category_name
-                    )
-
-                    # ===============================
-                    # SUBCATEGORY (OPTIONAL)
-                    # ===============================
-                    sub_count = int(
-                        request.POST.get(f"subcategory_count_{i}", 0)
-                    )
-
-                    for j in range(sub_count):
-
-                        sub_name = request.POST.get(
-                            f"category_{i}_subcategory_{j}", ""
-                        ).strip()
-
-                        if not sub_name:
-                            continue  # skip empty subcategory
-
-                        if SubCategory.objects.filter(
-                            category=category,
-                            name=sub_name
-                        ).exists():
-                            raise Exception(
-                                f"Already exists: "
-                                f"{domain.name} → {category.name} → {sub_name}"
-                            )
-
-                        SubCategory.objects.create(
-                            category=category,
-                            name=sub_name
-                        )
-
-            messages.success(request, "Configuration saved successfully.")
-            return redirect("environmental_mis:configuration_flow")
-
-        except Exception as e:
-            messages.error(request, str(e))
-            return redirect("environmental_mis:configuration_flow")
-
-    return render(
-        request,
-        "environmental_mis/configuration_flow.html",
-        {"business_types": business_types}
-    )
-
-
-# =========================================================
-# DASHBOARD
-# =========================================================
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.core.paginator import Paginator
-from django.db.models import Max
-from django.http import JsonResponse
-
-from .models import (
-    EnvironmentalMISReportConfig,
-    Domain,
-    Category,
-    SubCategory
-)
-from apps.ENVdata.models import Unit
-from .permissions import env_module_required, admin_env_required
-
-
-# =====================================================
-# LIST
-# =====================================================
-
-from collections import OrderedDict
-
-@env_module_required
-@admin_env_required
-def report_config_list(request):
-
-    configs = EnvironmentalMISReportConfig.objects.select_related(
-        "business_type",
-        "domain",
-        "category",
-        "subcategory",
-        "unit"
-    ).order_by(
-        "business_type__name",
-        "domain__name",
-        "category__name",
-        "subcategory__name",
-        "order"
-    )
-
-    grouped_data = OrderedDict()
-
-    for obj in configs:
-
-        group_key = (
-            obj.business_type.name,
-            obj.domain.name,
-            obj.category.name,
-            obj.subcategory.name if obj.subcategory else None
-        )
-        print(group_key)
-
-
-        if group_key not in grouped_data:
-            grouped_data[group_key] = []
-
-        grouped_data[group_key].append(obj)
-
-    return render(
-        request,
-        "environmental_mis/report_config_list.html",
-        {"grouped_data": grouped_data}
-    )
-
-# =====================================================
-# CREATE
-# =====================================================
-
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.db.models import Max
-from django.http import JsonResponse
-from .models import (
-    EnvironmentalMISReportConfig,
-    Domain,
-    Category,
-    SubCategory
-)
-from apps.ENVdata.models import Unit
-from .permissions import env_module_required, admin_env_required
-
-
-@env_module_required
-@admin_env_required
-def report_config_create(request):
-
-    domains = Domain.objects.select_related(
-        "business_type"
-    ).filter(
-        is_active=True,
-        business_type__is_active=True
-    ).order_by(
-        "business_type__name",
-        "name"
-    )
-
-    if request.method == "POST":
-
-        domain_id = request.POST.get("domain")
-        category_id = request.POST.get("category")
-        subcategory_id = request.POST.get("subcategory")
-
-        questions = request.POST.getlist("question_text[]")
-        units = request.POST.getlist("unit_id[]")
-
-        if not domain_id or not category_id:
-            messages.error(request, "Domain and Category are required.")
-            return redirect("environmental_mis:report_config_create")
-
-        if not questions:
-            messages.error(request, "At least one question is required.")
-            return redirect("environmental_mis:report_config_create")
-
-        domain = get_object_or_404(Domain, id=domain_id)
-        business_type = domain.business_type
-
-        max_order = EnvironmentalMISReportConfig.objects.filter(
-            domain=domain,
-            category_id=category_id
-        ).aggregate(Max("order"))["order__max"] or 0
-
-        order_counter = max_order + 1
-
-        for q_text, unit_id in zip(questions, units):
-
-            if q_text.strip() and unit_id:
-
-                EnvironmentalMISReportConfig.objects.create(
-                    business_type=business_type,
-                    domain=domain,
-                    category_id=category_id,
-                    subcategory_id=subcategory_id if subcategory_id else None,
-                    question_text=q_text.strip(),
-                    unit_id=unit_id,
-                    order=order_counter,
-                    created_by=request.user
-                )
-
-                order_counter += 1
-
-        messages.success(request, "Report configuration created successfully.")
-        return redirect("environmental_mis:report_config_list")
-
-    return render(
-        request,
-        "environmental_mis/report_config_form.html",
-        {"domains": domains}
-    )
-
-
-# =====================================================
-# EDIT
-# =====================================================
-@env_module_required
-@admin_env_required
-def report_config_edit(request, pk):
-
-    config = get_object_or_404(EnvironmentalMISReportConfig, pk=pk)
-
-    configs = EnvironmentalMISReportConfig.objects.filter(
-        business_type=config.business_type,
-        domain=config.domain,
-        category=config.category,
-        subcategory=config.subcategory
-    ).order_by("order")
-
-    domains = Domain.objects.select_related(
-        "business_type"
-    ).filter(
-        is_active=True,
-        business_type__is_active=True
-    ).order_by(
-        "business_type__name",
-        "name"
-    )
-
-    if request.method == "POST":
-
-        domain_id = request.POST.get("domain")
-        category_id = request.POST.get("category")
-        subcategory_id = request.POST.get("subcategory")
-
-        questions = request.POST.getlist("question_text[]")
-        units = request.POST.getlist("unit_id[]")
-
-        domain = get_object_or_404(Domain, id=domain_id)
-        business_type = domain.business_type
-
-        # Existing configs
-        existing_configs = list(configs)
-
-        order_counter = 1
-
-        for i, (q_text, unit_id) in enumerate(zip(questions, units)):
-
-            if not q_text.strip() or not unit_id:
-                continue
-
-            if i < len(existing_configs):
-
-                # UPDATE existing
-                obj = existing_configs[i]
-                obj.question_text = q_text.strip()
-                obj.unit_id = unit_id
-                obj.order = order_counter
-                obj.save()
-
-            else:
-
-                # CREATE new
-                EnvironmentalMISReportConfig.objects.create(
-                    business_type=business_type,
-                    domain=domain,
-                    category_id=category_id,
-                    subcategory_id=subcategory_id if subcategory_id else None,
-                    question_text=q_text.strip(),
-                    unit_id=unit_id,
-                    order=order_counter,
-                    created_by=request.user
-                )
-
-            order_counter += 1
-
-        # DELETE removed configs
-        if len(existing_configs) > len(questions):
-
-            for obj in existing_configs[len(questions):]:
-                obj.delete()
-
-        messages.success(request, "Report configuration updated.")
-        return redirect("environmental_mis:report_config_list")
-
-    return render(
-        request,
-        "environmental_mis/report_config_form.html",
-        {
-            "domains": domains,
-            "configs": configs,
-            "edit_mode": True
-        }
-    )
-
-
-# =====================================================
-# DELETE
-# =====================================================
-
-@env_module_required
-@admin_env_required
-def report_config_delete(request, pk):
-
-    config = get_object_or_404(EnvironmentalMISReportConfig, pk=pk)
-    config.delete()
-
-    messages.success(request, "Report configuration deleted.")
-    return redirect("environmental_mis:report_config_list")
-
-
-# =====================================================
-# AJAX
-# =====================================================
-
-def load_report_domains(request):
-
-    business_type_id = request.GET.get("business_type")
-
-    domains = Domain.objects.filter(
-        business_type_id=business_type_id,
-        is_active=True
-    ).values("id", "name")
-
-    return JsonResponse(list(domains), safe=False)
-
-
-def load_report_categories(request):
-
-    domain_id = request.GET.get("domain")
-
-    categories = Category.objects.filter(
-        domain_id=domain_id,
-        is_active=True
-    ).values("id", "name")
-
-    return JsonResponse(list(categories), safe=False)
-
-
-
-def load_report_subcategories(request):
-
-    category_id = request.GET.get("category")
-
-    subcategories = SubCategory.objects.filter(
-        category_id=category_id,
-        is_active=True
-    ).values("id", "name")
-
-    return JsonResponse(list(subcategories), safe=False)
-
-
-def load_report_units(request):
-
-    units = Unit.objects.filter(is_active=True).values("id", "name")
-    return JsonResponse(list(units), safe=False)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-from collections import defaultdict
-from django.shortcuts import render
-from .models import BusinessType, Domain, EnvironmentalMISReportConfig
-from .permissions import env_module_required
-
-
-@env_module_required
-def manufacturing_environment_report(request):
-
-    business_type = BusinessType.objects.filter(
-        name__iexact="Manufacturing",
-        is_active=True
-    ).first()
-
-    domain = Domain.objects.filter(
-        business_type=business_type,
-        name__iexact="Environment",
-        is_active=True
-    ).first()
-
-    configs = EnvironmentalMISReportConfig.objects.select_related(
-        "category",
-        "subcategory",
-        "unit",
-        "unit__category"
-    ).filter(
-        business_type=business_type,
-        domain=domain,
-        is_active=True
-    ).order_by(
-        "category__name",
-        "subcategory__name",
-        "order"
-    )
-
-    grouped = defaultdict(lambda: defaultdict(list))
-
-    for obj in configs:
-        grouped[obj.category.name][
-            obj.subcategory.name if obj.subcategory else ""
-        ].append(obj)
-
-    report_rows = []
-
-    for category, subcats in grouped.items():
-
-        category_total_rows = sum(len(qs) + 2 for qs in subcats.values())
-        category_first = True
-
-        for subcat, questions in subcats.items():
-
-            subcat_total_rows = len(questions) + 2
-            subcat_first = True
-
-            # Normal question rows
-            for q in questions:
-
-                report_rows.append({
-                    "id": q.id,
-                    "category": category,
-                    "category_rowspan": category_total_rows if category_first else 0,
-                    "subcategory": subcat,
-                    "subcategory_rowspan": subcat_total_rows if subcat_first else 0,
-                    "question": q.question_text,
-                    "unit_category": q.unit.category.name if q.unit.category else "",
-                    "unit": q.unit.name,
-                    "is_total": False,
-                    "group_key": f"{category}_{subcat}"
-                })
-
-                category_first = False
-                subcat_first = False
-
-            # TOTAL ROW (Volume)
-            report_rows.append({
-                "id": f"total_{category}_{subcat}",
-                "category": "",
-                "category_rowspan": 0,
-                "subcategory": "",
-                "subcategory_rowspan": 0,
-                "question": f"TOTAL ( KL ) - {category}",
-                "unit_category": "Volume",
-                "unit": "kiloliters",
-                "is_total": True,
-                "group_key": f"{category}_{subcat}"
-            })
-
-            # COST ROW
-            report_rows.append({
-                "id": f"cost_{category}_{subcat}",
-                "category": "",
-                "category_rowspan": 0,
-                "subcategory": "",
-                "subcategory_rowspan": 0,
-                "question": "",
-                "unit_category": "Cost",
-                "unit": "₹ (INR)",
-                "is_total": True,
-                "group_key": f"{category}_{subcat}"
-            })
-
-    months = ["Jan","Feb","Mar","Apr","May","Jun",
-              "Jul","Aug","Sep","Oct","Nov","Dec"]
-
-    return render(
-        request,
-        "environmental_mis/manufacturing_environment_report.html",
-        {
-            "report_rows": report_rows,
-            "months": months
-        }
-    )
-
-
-
-
-
-# 
-from collections import defaultdict
 from django.shortcuts import render
 from django.utils import timezone
-from .models import BusinessType, Domain, EnvironmentalMISReportConfig
 from apps.organizations.models import Plant
-from .permissions import env_module_required
-from collections import defaultdict
-from django.utils import timezone
-from django.shortcuts import render
+from .models import WasteReportData, WasteSummary
+from .report_structure import MANUFACTURING_WASTE_STRUCTURE
+from django.db.models import Sum
+from .models import EnvironmentEntry
 
-@env_module_required
+
 def manufacturing_waste_report(request):
 
-    current_year = timezone.now().year
-    selected_plant = Plant.objects.first()
+    user_plants = Plant.objects.all()
 
-    business_type = BusinessType.objects.filter(
-        name__iexact="Manufacturing",
-        is_active=True
-    ).first()
+    plant_id = request.GET.get("plant_id")
+    waste_type = request.GET.get("waste_type", "MANUFACTURING")
 
-    domain = Domain.objects.filter(
-        business_type=business_type,
-        name__iexact="Waste",
-        is_active=True
-    ).first()
+    if plant_id:
+        plant = Plant.objects.get(id=plant_id)
+    else:
+        plant = user_plants.first()
 
-    configs = EnvironmentalMISReportConfig.objects.select_related(
-        "category","unit","subcategory"
-    ).filter(
-        business_type=business_type,
-        domain=domain,
-        is_active=True
-    ).order_by("category__name","order")
+    year = timezone.now().year
 
-    existing_data = EnvironmentalMISQuarterlyData.objects.filter(
-        plant=selected_plant,
-        year=current_year
+    # ================= MAIN REPORT DATA =================
+
+    report_data = WasteReportData.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=waste_type
     )
 
-    # Map by report_config first
-    config_map = {
-        obj.report_config_id: obj for obj in existing_data
+    data_map = {d.row_name: d for d in report_data}
+
+    # ================= SUMMARY DATA =================
+
+    summary_data = WasteSummary.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=waste_type
+    )
+
+    summary_map = {s.summary_type: s for s in summary_data}
+
+
+    # ================= PRODUCTION FROM ENVIRONMENT REPORT =================
+    # ================= SELECT ENVIRONMENT REPORT TYPE =================
+
+    if waste_type == "MANUFACTURING":
+        env_report_type = "MANUFACTURING_ENV"
+    else:
+        env_report_type = "NON_MANUFACTURING_ENV"
+
+
+    # ================= PRODUCTION FROM ENVIRONMENT REPORT =================
+
+    env_entries = EnvironmentEntry.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=env_report_type
+    )
+
+    prod = env_entries.aggregate(
+        jan=Sum("jan_qty"),
+        feb=Sum("feb_qty"),
+        mar=Sum("mar_qty"),
+
+        apr=Sum("apr_qty"),
+        may=Sum("may_qty"),
+        jun=Sum("jun_qty"),
+
+        jul=Sum("jul_qty"),
+        aug=Sum("aug_qty"),
+        sep=Sum("sep_qty"),
+
+        oct=Sum("oct_qty"),
+        nov=Sum("nov_qty"),
+        dec=Sum("dec_qty"),
+    )
+
+    # replace None with 0
+    for k,v in prod.items():
+        prod[k] = v or 0
+
+    # quarters
+    prod["q1"] = prod["jan"] + prod["feb"] + prod["mar"]
+    prod["q2"] = prod["apr"] + prod["may"] + prod["jun"]
+    prod["q3"] = prod["jul"] + prod["aug"] + prod["sep"]
+    prod["q4"] = prod["oct"] + prod["nov"] + prod["dec"]
+
+    # yearly total
+    prod["total"] = sum([
+        prod["jan"],prod["feb"],prod["mar"],
+        prod["apr"],prod["may"],prod["jun"],
+        prod["jul"],prod["aug"],prod["sep"],
+        prod["oct"],prod["nov"],prod["dec"]
+    ])
+
+    # ================= CONTEXT =================
+
+    context = {
+        "report_rows": MANUFACTURING_WASTE_STRUCTURE,
+        "data_map": data_map,
+        "summary_map": summary_map,   
+        "production_summary": prod,
+        "selected_plant": plant,
+        "user_plants": user_plants,
+        "current_year": year,
+        "selected_type": waste_type
     }
-
-    # fallback map using category + question_text
-    fallback_map = {
-        (
-            obj.category_id,
-            (obj.question_text or "").strip().lower()
-        ): obj
-        for obj in existing_data
-    }
-
-    grouped = defaultdict(list)
-
-    for obj in configs:
-        grouped[obj.category.name].append(obj)
-
-    report_rows=[]
-    sl_no=1
-
-    for category,questions in grouped.items():
-
-        first=True
-
-        for q in questions:
-
-            # try config id match
-            saved=config_map.get(q.id)
-
-            # fallback match if config changed
-            if not saved:
-
-                key=(
-                    q.category_id,
-                    q.question_text.strip().lower()
-                )
-
-                saved=fallback_map.get(key)
-
-            report_rows.append({
-
-                "sl_no":sl_no if first else "",
-                "category":category if first else "",
-                "config_id":q.id,
-                "scrap":q.question_text,
-                "unit":q.unit.name if q.unit else "",
-                "saved":saved,
-                "is_total":False
-
-            })
-
-            first=False
-
-        # total row
-        report_rows.append({
-
-            "sl_no":"",
-            "category":"",
-            "config_id":None,
-            "scrap":"TOTAL QUANTITY",
-            "unit":"",
-            "saved":None,
-            "is_total":True
-
-        })
-
-        sl_no+=1
 
     return render(
         request,
         "environmental_mis/manufacturing_waste_report.html",
-        {
-            "report_rows":report_rows,
-            "selected_plant":selected_plant,
-            "current_year":current_year
-        }
+        context
     )
+
+
+import json
+from django.http import JsonResponse
+from django.utils import timezone
+from .models import WasteReportData, WasteSummary
+from apps.organizations.models import Plant
+
+from django.http import JsonResponse
+from django.utils import timezone
+import json
+
+from .models import WasteReportData, WasteSummary
+from apps.organizations.models import Plant
+
+
+def save_waste_report(request):
+
+    if request.method != "POST":
+        return JsonResponse({"status":"error"},status=400)
+
+    data=json.loads(request.body)
+
+    rows=data.get("rows",[])
+    summary=data.get("summary",[])
+
+    plant_id=request.GET.get("plant_id")
+    waste_type=request.GET.get("type","manufacturing")
+
+    report_type="MANUFACTURING" if waste_type=="manufacturing" else "NON_MANUFACTURING"
+
+    plant=Plant.objects.get(id=plant_id)
+
+    year=timezone.now().year
+
+
+    # ================= MAIN TABLE =================
+
+    for row in rows:
+
+        row_name=row.pop("row_name")
+
+        WasteReportData.objects.update_or_create(
+
+            plant=plant,
+            year=year,
+            report_type=report_type,
+            row_name=row_name,
+
+            defaults=row
+
+        )
+
+
+    # ================= SUMMARY TABLE =================
+
+    for item in summary:
+
+        summary_type=item.pop("summary_type")
+
+        WasteSummary.objects.update_or_create(
+
+            plant=plant,
+            year=year,
+            report_type=report_type,
+            summary_type=summary_type,
+
+            defaults=item
+
+        )
+
+
+    return JsonResponse({"status":"success"})
+
+
+
+
+
+
+
 
 
 
 import json
-from decimal import Decimal
+
+from django.shortcuts import render
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from apps.organizations.models import Plant
+from .models import EnvironmentEntry
+
+
+# ===============================
+# ENVIRONMENT REPORT PAGE
+# ===============================
+from django.shortcuts import render
 from django.utils import timezone
+from .report_structure import (
+    MANUFACTURING_ENVIRONMENT_STRUCTURE,
+    NON_MANUFACTURING_ENVIRONMENT_STRUCTURE
+)
 
-@env_module_required
-def save_manufacturing_waste(request):
+def prepare_rows(structure):
 
-    if request.method=="POST":
+    rows = []
+    current_section = ""
 
-        data=json.loads(request.body)
+    for r in structure:
 
-        plant=Plant.objects.first()
-        year=timezone.now().year
+        row = r.copy()
 
-        for row in data:
+        if row.get("section"):
+            current_section = row["section"]
 
-            config_id=row.get("config_id")
+        row["category"] = current_section
+        row["subcategory"] = row.get("sub_section", "")
 
-            if not config_id:
-                continue
+        row["question"] = row.get("question", "")
+        row["unit_category"] = row.get("unit_category", "")
+        row["unit"] = row.get("unit", "")
+        row["row_key"] = row.get("row_key", "")
 
-            config=EnvironmentalMISReportConfig.objects.get(id=config_id)
+        rows.append(row)
 
-            question_text=config.question_text
+    # ================= CATEGORY ROWSPAN =================
 
-            jan_qty=Decimal(str(row.get("jan_qty",0)))
-            feb_qty=Decimal(str(row.get("feb_qty",0)))
-            mar_qty=Decimal(str(row.get("mar_qty",0)))
+    category_counts = {}
 
-            apr_qty=Decimal(str(row.get("apr_qty",0)))
-            may_qty=Decimal(str(row.get("may_qty",0)))
-            jun_qty=Decimal(str(row.get("jun_qty",0)))
+    for row in rows:
+        cat = row["category"]
+        category_counts[cat] = category_counts.get(cat, 0) + 1
 
-            jul_qty=Decimal(str(row.get("jul_qty",0)))
-            aug_qty=Decimal(str(row.get("aug_qty",0)))
-            sep_qty=Decimal(str(row.get("sep_qty",0)))
+    shown_category = set()
 
-            oct_qty=Decimal(str(row.get("oct_qty",0)))
-            nov_qty=Decimal(str(row.get("nov_qty",0)))
-            dec_qty=Decimal(str(row.get("dec_qty",0)))
+    for row in rows:
 
-            jan_cost=Decimal(str(row.get("jan_cost",0)))
-            feb_cost=Decimal(str(row.get("feb_cost",0)))
-            mar_cost=Decimal(str(row.get("mar_cost",0)))
+        cat = row["category"]
 
-            apr_cost=Decimal(str(row.get("apr_cost",0)))
-            may_cost=Decimal(str(row.get("may_cost",0)))
-            jun_cost=Decimal(str(row.get("jun_cost",0)))
-
-            jul_cost=Decimal(str(row.get("jul_cost",0)))
-            aug_cost=Decimal(str(row.get("aug_cost",0)))
-            sep_cost=Decimal(str(row.get("sep_cost",0)))
-
-            oct_cost=Decimal(str(row.get("oct_cost",0)))
-            nov_cost=Decimal(str(row.get("nov_cost",0)))
-            dec_cost=Decimal(str(row.get("dec_cost",0)))
-
-            q1_qty=jan_qty+feb_qty+mar_qty
-            q2_qty=apr_qty+may_qty+jun_qty
-            q3_qty=jul_qty+aug_qty+sep_qty
-            q4_qty=oct_qty+nov_qty+dec_qty
-
-            q1_cost=jan_cost+feb_cost+mar_cost
-            q2_cost=apr_cost+may_cost+jun_cost
-            q3_cost=jul_cost+aug_cost+sep_cost
-            q4_cost=oct_cost+nov_cost+dec_cost
-
-            total_qty=q1_qty+q2_qty+q3_qty+q4_qty
-            total_cost=q1_cost+q2_cost+q3_cost+q4_cost
-
-            EnvironmentalMISQuarterlyData.objects.update_or_create(
-
-                plant=plant,
-                year=year,
-                report_config=config,
-
-                defaults={
-
-                    "question_text":question_text,
-
-                    "business_type":config.business_type,
-                    "domain":config.domain,
-                    "category":config.category,
-                    "subcategory":config.subcategory,
-                    "unit":config.unit,
-
-                    "part_code":row.get("part_code"),
-                    "treatment":row.get("treatment"),
-
-                    "jan_qty":jan_qty,
-                    "feb_qty":feb_qty,
-                    "mar_qty":mar_qty,
-
-                    "apr_qty":apr_qty,
-                    "may_qty":may_qty,
-                    "jun_qty":jun_qty,
-
-                    "jul_qty":jul_qty,
-                    "aug_qty":aug_qty,
-                    "sep_qty":sep_qty,
-
-                    "oct_qty":oct_qty,
-                    "nov_qty":nov_qty,
-                    "dec_qty":dec_qty,
-
-                    "jan_cost":jan_cost,
-                    "feb_cost":feb_cost,
-                    "mar_cost":mar_cost,
-
-                    "apr_cost":apr_cost,
-                    "may_cost":may_cost,
-                    "jun_cost":jun_cost,
-
-                    "jul_cost":jul_cost,
-                    "aug_cost":aug_cost,
-                    "sep_cost":sep_cost,
-
-                    "oct_cost":oct_cost,
-                    "nov_cost":nov_cost,
-                    "dec_cost":dec_cost,
-
-                    "q1_quantity":q1_qty,
-                    "q2_quantity":q2_qty,
-                    "q3_quantity":q3_qty,
-                    "q4_quantity":q4_qty,
-
-                    "q1_cost":q1_cost,
-                    "q2_cost":q2_cost,
-                    "q3_cost":q3_cost,
-                    "q4_cost":q4_cost,
-
-                    "total_quantity":total_qty,
-                    "total_cost":total_cost
-                }
-            )
-
-        return JsonResponse({"status":"success"})
+        if cat not in shown_category:
+            row["category_rowspan"] = category_counts[cat]
+            shown_category.add(cat)
+        else:
+            row["category_rowspan"] = None
 
 
-@env_module_required
-def non_manufacturing_waste_report(request):
+    # ================= SUBCATEGORY ROWSPAN =================
 
-    current_year = timezone.now().year
-    selected_plant = Plant.objects.first()
+    subcategory_counts = {}
 
-    business_type = BusinessType.objects.filter(
-        name__iexact="Non-Manufacturing",
-        is_active=True
-    ).first()
+    for row in rows:
 
-    domain = Domain.objects.filter(
-        business_type=business_type,
-        name__iexact="Waste",
-        is_active=True
-    ).first()
+        key = (row["category"], row["subcategory"])
 
-    configs = EnvironmentalMISReportConfig.objects.select_related(
-        "category","unit","subcategory"
-    ).filter(
-        business_type=business_type,
-        domain=domain,
-        is_active=True
-    ).order_by("category__name","order")
+        if row["subcategory"]:
+            subcategory_counts[key] = subcategory_counts.get(key, 0) + 1
 
-    existing_data = EnvironmentalMISQuarterlyData.objects.filter(
-        plant=selected_plant,
-        year=current_year
+
+    shown_subcategory = set()
+
+    for row in rows:
+
+        key = (row["category"], row["subcategory"])
+
+        if not row["subcategory"]:
+            row["subcategory_rowspan"] = None
+            continue
+
+        if key not in shown_subcategory:
+            row["subcategory_rowspan"] = subcategory_counts[key]
+            shown_subcategory.add(key)
+        else:
+            row["subcategory_rowspan"] = None
+
+    return rows
+
+
+
+
+
+
+
+
+
+
+
+
+from .models import EnvironmentEntry
+
+def environment_report(request):
+
+    user_plants = Plant.objects.all()
+
+    selected_type = request.GET.get("type", "MANUFACTURING")
+    plant_id = request.GET.get("plant_id")
+
+    if plant_id:
+        plant = Plant.objects.get(id=plant_id)
+    else:
+        plant = user_plants.first()
+
+    year = timezone.now().year
+
+    manufacturing_rows = prepare_rows(MANUFACTURING_ENVIRONMENT_STRUCTURE)
+    non_manufacturing_rows = prepare_rows(NON_MANUFACTURING_ENVIRONMENT_STRUCTURE)
+
+    months = [
+        "jan","feb","mar",
+        "apr","may","jun",
+        "jul","aug","sep",
+        "oct","nov","dec"
+    ]
+
+    report_type = (
+        "MANUFACTURING_ENV"
+        if selected_type == "MANUFACTURING"
+        else "NON_MANUFACTURING_ENV"
     )
 
-    config_map = {
-        obj.report_config_id: obj for obj in existing_data
+    # ================= LOAD SAVED DATA =================
+
+    saved_entries = EnvironmentEntry.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=report_type
+    )
+
+    data_map = {
+        entry.row_name: entry
+        for entry in saved_entries
     }
 
-    grouped = defaultdict(list)
-
-    for obj in configs:
-        grouped[obj.category.name].append(obj)
-
-    report_rows = []
-    sl_no = 1
-
-    for category, questions in grouped.items():
-
-        first = True
-
-        for q in questions:
-
-            saved = config_map.get(q.id)
-
-            report_rows.append({
-                "sl_no": sl_no if first else "",
-                "category": category if first else "",
-                "config_id": q.id,
-                "scrap": q.question_text,
-                "unit": q.unit.name if q.unit else "",
-                "saved": saved,
-                "is_total": False
-            })
-
-            first = False
-
-        report_rows.append({
-            "sl_no": "",
-            "category": "",
-            "config_id": None,
-            "scrap": "TOTAL QUANTITY",
-            "unit": "",
-            "saved": None,
-            "is_total": True
-        })
-
-        sl_no += 1
+    context = {
+        "manufacturing_rows": manufacturing_rows,
+        "non_manufacturing_rows": non_manufacturing_rows,
+        "months": months,
+        "selected_type": selected_type,
+        "selected_plant": plant,
+        "user_plants": user_plants,
+        "current_year": year,
+        "data_map": data_map
+    }
 
     return render(
         request,
-        "environmental_mis/non_manufacturing_waste_report.html",
-        {
-            "report_rows": report_rows,
-            "selected_plant": selected_plant,
-            "current_year": current_year
-        }
+        "environmental_mis/environment_report.html",
+        context
+    )
+
+# ===============================
+# SAVE DATA API
+# ===============================
+def save_environment_report(request):
+
+    if request.method != "POST":
+        return JsonResponse({"status": "error"})
+
+    data = json.loads(request.body)
+
+    plant_id = data.get("plant_id")
+    report_type = data.get("report_type")
+    year = data.get("year")
+
+    rows = data.get("rows", [])
+
+    plant = Plant.objects.get(id=plant_id)
+
+    if report_type == "MANUFACTURING":
+        report_type = "MANUFACTURING_ENV"
+    else:
+        report_type = "NON_MANUFACTURING_ENV"
+
+    months = [
+        "jan_qty","feb_qty","mar_qty","apr_qty","may_qty","jun_qty",
+        "jul_qty","aug_qty","sep_qty","oct_qty","nov_qty","dec_qty"
+    ]
+
+    for row in rows:
+
+        row_name = row.get("row_name")
+
+        # Convert empty values to 0
+        for m in months:
+            val = row.get(m)
+            row[m] = float(val) if val not in ["", None] else 0
+
+        # Calculate totals
+        row["total_quantity"] = sum(row[m] for m in months)
+
+        row["q1_quantity"] = row["jan_qty"] + row["feb_qty"] + row["mar_qty"]
+        row["q2_quantity"] = row["apr_qty"] + row["may_qty"] + row["jun_qty"]
+        row["q3_quantity"] = row["jul_qty"] + row["aug_qty"] + row["sep_qty"]
+        row["q4_quantity"] = row["oct_qty"] + row["nov_qty"] + row["dec_qty"]
+
+        EnvironmentEntry.objects.update_or_create(
+            plant=plant,
+            year=year,
+            report_type=report_type,
+            row_name=row_name,
+            defaults=row
+        )
+
+    return JsonResponse({"status": "success"})
+
+
+# ===============================
+# ANALYTICAL DASHBOARD
+# ===============================
+
+from django.shortcuts import render
+from django.utils import timezone
+from apps.organizations.models import Plant
+from .models import EnvironmentEntry
+
+
+def environment_dashboard(request):
+
+    user_plants = Plant.objects.all()
+
+    plant_id = request.GET.get("plant_id")
+    selected_type = request.GET.get("type", "MANUFACTURING")
+
+    year = timezone.now().year
+
+    report_type = (
+        "MANUFACTURING_ENV"
+        if selected_type == "MANUFACTURING"
+        else "NON_MANUFACTURING_ENV"
+    )
+
+    # ================= PLANT FILTER =================
+
+    if plant_id and plant_id != "all":
+
+        selected_plant = Plant.objects.filter(id=plant_id).first()
+
+        entries = EnvironmentEntry.objects.filter(
+            plant=selected_plant,
+            year=year,
+            report_type=report_type
+        )
+
+    else:
+
+        selected_plant = None
+
+        entries = EnvironmentEntry.objects.filter(
+            year=year,
+            report_type=report_type
+        )
+
+    # ================= DATA AGGREGATION =================
+
+    data = {}
+
+    for e in entries:
+
+        if e.row_name not in data:
+
+            data[e.row_name] = e
+
+        else:
+
+            existing = data[e.row_name]
+
+            months = [
+                "jan_qty","feb_qty","mar_qty",
+                "apr_qty","may_qty","jun_qty",
+                "jul_qty","aug_qty","sep_qty",
+                "oct_qty","nov_qty","dec_qty"
+            ]
+
+            for m in months:
+                setattr(existing, m, getattr(existing, m) + getattr(e, m))
+
+            existing.total_quantity += e.total_quantity
+
+    months = [
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec"
+    ]
+
+    def get_monthly(row_key):
+
+        row = data.get(row_key)
+
+        if not row:
+            return [0]*12
+
+        return [
+            row.jan_qty,row.feb_qty,row.mar_qty,
+            row.apr_qty,row.may_qty,row.jun_qty,
+            row.jul_qty,row.aug_qty,row.sep_qty,
+            row.oct_qty,row.nov_qty,row.dec_qty
+        ]
+
+    # ================= KPI =================
+
+    if selected_type == "MANUFACTURING":
+
+        water = data.get("total_water_intake")
+        energy = data.get("electric_power_volume")
+        cost = data.get("total_ERA_bill_cost")
+
+    else:
+
+        water = data.get("Non_total_kl")
+        energy = data.get("Non_total_energy_power_volume")
+        cost = data.get("Non_total_energy_power_cost")
+
+    # ================= PLANT ENERGY COMPARISON =================
+
+    plant_labels = []
+    plant_energy = []
+    plant_water = []
+
+    for plant in user_plants:
+
+        if selected_type == "MANUFACTURING":
+
+            energy_row = "electric_power_volume"
+            water_row = "total_water_intake"
+
+        else:
+
+            energy_row = "Non_total_energy_power_volume"
+            water_row = "Non_total_kl"
+
+
+        energy_entry = EnvironmentEntry.objects.filter(
+            plant=plant,
+            year=year,
+            report_type=report_type,
+            row_name=energy_row
+        ).first()
+
+        water_entry = EnvironmentEntry.objects.filter(
+            plant=plant,
+            year=year,
+            report_type=report_type,
+            row_name=water_row
+        ).first()
+
+
+        plant_labels.append(plant.name)
+
+        plant_energy.append(
+            energy_entry.total_quantity if energy_entry else 0
+        )
+
+        plant_water.append(
+            water_entry.total_quantity if water_entry else 0
+        )
+
+    # ================= ENERGY SOURCE =================
+
+    energy_sources = [
+
+        data.get("disel_mobile_volume").total_quantity if data.get("disel_mobile_volume") else 0,
+
+        data.get("disel_stationary_volume").total_quantity if data.get("disel_stationary_volume") else 0,
+
+        data.get("electric_power_volume").total_quantity if data.get("electric_power_volume") else 0,
+
+        data.get("natural_gas_volume").total_quantity if data.get("natural_gas_volume") else 0,
+
+        data.get("renewable_energy_solar_used_volume").total_quantity if data.get("renewable_energy_solar_used_volume") else 0
+    ]
+
+    if selected_type == "MANUFACTURING":
+
+        water_cost = data.get("total_mnm_water_cost")
+
+        cost_data = [
+            water_cost.total_quantity if water_cost else 0,
+            cost.total_quantity if cost else 0
+        ]
+
+    else:
+
+        water_cost = data.get("Non_water_cost_rs")
+
+        cost_data = [
+            water_cost.total_quantity if water_cost else 0,
+            cost.total_quantity if cost else 0
+        ]
+
+    def r2(val):
+        return round(val or 0, 2)
+
+    context = {
+
+        "user_plants": user_plants,
+        "selected_plant": selected_plant,
+        "selected_type": selected_type,
+
+        "months": months,
+
+        "kpi_water": r2(water.total_quantity if water else 0),
+        "kpi_energy": r2(energy.total_quantity if energy else 0),
+        "kpi_cost": r2(cost.total_quantity if cost else 0),
+
+        "water_monthly": get_monthly(
+            "total_water_intake"
+            if selected_type=="MANUFACTURING"
+            else "Non_total_kl"
+        ),
+
+        "energy_monthly": get_monthly(
+            "electric_power_volume"
+            if selected_type=="MANUFACTURING"
+            else "Non_total_energy_power_volume"
+        ),
+
+        "energy_sources": energy_sources,
+        "cost_data": cost_data,
+
+        "plant_labels": plant_labels,
+        "plant_energy": plant_energy,
+        "plant_water": plant_water,
+
+        "inlet_cod": get_monthly("inlet_effluent_cod"),
+        "treated_cod": get_monthly("treated_effuent_tank_cod"),
+
+        "inlet_bod": get_monthly("inlet_effluent_bod"),
+        "treated_bod": get_monthly("treated_effuent_tank_bod"),
+    }
+
+    return render(
+        request,
+        "environmental_mis/environment_dashboard.html",
+        context
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from django.shortcuts import render
+from django.utils import timezone
+from apps.organizations.models import Plant
+from .models import WasteSummary
+
+
+def waste_dashboard(request):
+
+    user_plants = Plant.objects.all()
+
+    plant_id = request.GET.get("plant_id")
+    waste_type = request.GET.get("waste_type", "MANUFACTURING")
+
+    year = timezone.now().year
+
+
+    # safer mapping
+    report_map = {
+        "MANUFACTURING": ["MANUFACTURING", "MANUFACTURING_WASTE"],
+        "NON_MANUFACTURING": ["NON_MANUFACTURING", "NON_MANUFACTURING_WASTE"],
+    }
+
+    report_values = report_map.get(waste_type, ["MANUFACTURING"])
+
+
+    if plant_id:
+        selected_plant = Plant.objects.filter(id=plant_id).first()
+    else:
+        selected_plant = user_plants.first()
+
+
+    summaries = WasteSummary.objects.filter(
+        plant=selected_plant,
+        report_type__in=report_values
+    )
+
+
+    summary_map = {s.summary_type: s for s in summaries}
+
+
+    months = [
+        "jan","feb","mar",
+        "apr","may","jun",
+        "jul","aug","sep",
+        "oct","nov","dec"
+    ]
+
+
+    def monthly(summary_type):
+
+        s = summary_map.get(summary_type)
+
+        if not s:
+            return [0]*12
+
+        return [
+            float(getattr(s, f"{m}_qty") or 0)
+            for m in months
+        ]
+
+
+    def total(summary_type):
+
+        s = summary_map.get(summary_type)
+
+        if not s:
+            return 0
+
+        return float(s.total_quantity or 0)
+
+
+    context = {
+
+        "user_plants": user_plants,
+        "selected_plant": selected_plant,
+        "selected_type": waste_type,
+        "year": year,
+
+        "total_waste": total("GRAND_WASTE"),
+        "nonhaz_total": total("NON_HAZ"),
+        "haz_total": total("HAZ_PROCESS"),
+        "ewaste_total": total("E_WASTE"),
+        "diversion_total": total("DIVERSION_RATE"),
+
+        "nonhaz_unit": total("NON_HAZ_UNIT"),
+        "haz_unit": total("PROC_HAZ_UNIT"),
+
+        "grand_data": monthly("GRAND_WASTE"),
+        "nonhaz_data": monthly("NON_HAZ"),
+        "haz_data": monthly("HAZ_PROCESS"),
+        "ewaste_data": monthly("E_WASTE"),
+        "diversion_data": monthly("DIVERSION_RATE"),
+    }
+
+
+    return render(
+        request,
+        "environmental_mis/waste_dashboard.html",
+        context
     )

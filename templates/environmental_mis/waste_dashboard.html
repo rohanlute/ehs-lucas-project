@@ -1,0 +1,442 @@
+{% extends "base/base.html" %} {% load static %} {% block title %}Waste
+Analytics Dashboard{% endblock %} {% block extra_css %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+
+<style>
+  .dashboard-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+  }
+
+  .chart-box {
+    height: 320px;
+    width: 100%;
+  }
+
+  /* KPI GRID */
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .kpi-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+  }
+
+  .kpi-title {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+
+  .kpi-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #2563eb;
+  }
+
+  /* FILTER STYLE (UNCHANGED) */
+
+  .plant-selector-section {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .plant-selector-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .plant-selector-container label {
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .plant-selector-container select {
+    flex: 1;
+    min-width: 250px;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: white;
+    cursor: pointer;
+  }
+
+  .plant-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+</style>
+
+{% endblock %} {% block content %}
+
+<div class="container-fluid">
+  <h3 class="mb-4">Waste Analytics Dashboard</h3>
+
+  <!-- FILTER (UNCHANGED) -->
+
+  <div class="plant-selector-section">
+    <div class="row align-items-center">
+      <div class="col-md-5">
+        <div class="plant-selector-container">
+          <label>
+            <i class="fas fa-building"></i>
+            <span>Select Plant:</span>
+          </label>
+
+          <select id="plantSelect">
+
+            {% for plant in user_plants %}
+
+            <option value="{{ plant.id }}"
+            {% if selected_plant and plant.id == selected_plant.id %}selected{% endif %}>
+            {{ plant.name }}
+
+            </option>
+
+            {% endfor %}
+
+            </select>
+        </div>
+      </div>
+
+      <div class="col-md-2 text-end">
+        <span class="plant-count-badge">
+          <i class="fas fa-check-circle"></i>
+          {{ user_plants.count }} plant(s)
+        </span>
+      </div>
+
+      <div class="col-md-5">
+        <div class="plant-selector-container">
+          <label>
+            <i class="fas fa-recycle"></i>
+            <span>Waste Type:</span>
+          </label>
+
+          <select id="wasteType">
+
+            <option value="MANUFACTURING"
+            {% if selected_type == "MANUFACTURING" %}selected{% endif %}>
+            Manufacturing Waste
+            </option>
+
+            <option value="NON_MANUFACTURING"
+            {% if selected_type == "NON_MANUFACTURING" %}selected{% endif %}>
+            Non Manufacturing Waste
+            </option>
+
+            </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-title">Total Waste Generated</div>
+      <div class="kpi-value">{{ total_waste|floatformat:0 }}</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">Non Hazardous Waste</div>
+      <div class="kpi-value">{{ nonhaz_total|floatformat:0 }}</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">Hazardous Waste</div>
+      <div class="kpi-value">{{ haz_total|floatformat:0 }}</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-title">Diversion Rate</div>
+      <div class="kpi-value">{{ diversion_total|floatformat:2 }}%</div>
+    </div>
+  </div>
+
+  <!-- MONTHLY TREND -->
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="dashboard-card">
+        <h6>Monthly Waste Trend</h6>
+
+        <div id="trendChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPOSITION + GAUGE -->
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>Waste Composition</h6>
+
+        <div id="compositionChart" class="chart-box"></div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>Diversion Rate Gauge</h6>
+
+        <div id="gaugeChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STACKED WASTE -->
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="dashboard-card">
+        <h6>Hazardous vs Non-Hazardous Waste</h6>
+
+        <div id="hazStackChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EWASTE -->
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>E-Waste Trend</h6>
+
+        <div id="ewasteChart" class="chart-box"></div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>Waste Flow</h6>
+
+        <div id="sankeyChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+    const grand={{ grand_data|safe }}
+    const nonhaz={{ nonhaz_data|safe }}
+    const haz={{ haz_data|safe }}
+    const ewaste={{ ewaste_data|safe }}
+    const diversion={{ diversion_data|safe }}
+
+    const diversionRate={{ diversion_total|default:0 }}
+
+
+
+    /* TREND */
+
+    echarts.init(document.getElementById("trendChart")).setOption({
+
+    tooltip:{trigger:'axis'},
+
+    legend:{data:['Total','Non Hazardous','Hazardous']},
+
+    xAxis:{type:'category',data:months},
+
+    yAxis:{type:'value'},
+
+    series:[
+
+    { name:'Total',type:'line',data:grand,smooth:true },
+
+    { name:'Non Hazardous',type:'line',data:nonhaz,smooth:true },
+
+    { name:'Hazardous',type:'line',data:haz,smooth:true }
+
+    ]
+
+    })
+
+
+
+    /* PIE */
+
+    echarts.init(document.getElementById("compositionChart")).setOption({
+
+    tooltip:{trigger:'item'},
+
+    series:[{
+
+    type:'pie',
+
+    radius:['40%','70%'],
+
+    data:[
+
+    {value:{{ nonhaz_total }},name:'Non Hazardous'},
+
+    {value:{{ haz_total }},name:'Hazardous'},
+
+    {value:{{ ewaste_total }},name:'E-Waste'}
+
+    ]
+
+    }]
+
+    })
+
+
+
+    /* GAUGE */
+
+    echarts.init(document.getElementById("gaugeChart")).setOption({
+
+    series:[{
+
+    type:'gauge',
+
+    progress:{show:true,width:12},
+
+    axisLine:{lineStyle:{width:12}},
+
+    detail:{formatter:'{value}%'},
+
+    data:[{value:diversionRate,name:'Diversion'}]
+
+    }]
+
+    })
+
+
+
+    /* STACKED */
+
+    echarts.init(document.getElementById("hazStackChart")).setOption({
+
+    tooltip:{trigger:'axis'},
+
+    legend:{data:['Non Hazardous','Hazardous']},
+
+    xAxis:{type:'category',data:months},
+
+    yAxis:{type:'value'},
+
+    series:[
+
+    { name:'Non Hazardous',type:'bar',stack:'waste',data:nonhaz },
+
+    { name:'Hazardous',type:'bar',stack:'waste',data:haz }
+
+    ]
+
+    })
+
+
+
+    /* EWASTE */
+
+    echarts.init(document.getElementById("ewasteChart")).setOption({
+
+    tooltip:{trigger:'axis'},
+
+    xAxis:{type:'category',data:months},
+
+    yAxis:{type:'value'},
+
+    series:[{
+
+    name:'E-Waste',
+
+    type:'bar',
+
+    data:ewaste
+
+    }]
+
+    })
+
+
+
+    /* SANKEY */
+
+    echarts.init(document.getElementById("sankeyChart")).setOption({
+
+    series:[{
+
+    type:'sankey',
+
+    data:[
+
+    {name:'Total Waste'},
+
+    {name:'Recycled'},
+
+    {name:'Hazardous Treatment'},
+
+    {name:'Landfill'}
+
+    ],
+
+    links:[
+
+    {source:'Total Waste',target:'Recycled',value:{{ nonhaz_total }}},
+
+    {source:'Total Waste',target:'Hazardous Treatment',value:{{ haz_total }}},
+
+    {source:'Total Waste',target:'Landfill',value:{{ ewaste_total }}}
+
+    ]
+
+    }]
+
+    })
+
+
+
+    document.getElementById("plantSelect").addEventListener("change",updateDashboard)
+    document.getElementById("wasteType").addEventListener("change",updateDashboard)
+
+    function updateDashboard(){
+
+    let plant=document.getElementById("plantSelect").value
+    let type=document.getElementById("wasteType").value
+
+    let url=new URL(window.location.href)
+
+    url.searchParams.set("plant_id",plant)
+    url.searchParams.set("waste_type",type)
+
+    window.location.href=url.toString()
+
+    }
+  </script>
+</div>
+
+{% endblock %}
