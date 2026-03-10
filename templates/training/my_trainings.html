@@ -1,0 +1,204 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}My Trainings{% endblock %}
+{% block page_title %}My Trainings{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:dashboard' %}">Training</a></li>
+<li class="breadcrumb-item active">My Trainings</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .expiry-critical { border-left: 4px solid #dc3545 !important; }
+  .expiry-warning  { border-left: 4px solid #ffc107 !important; }
+  .expiry-ok       { border-left: 4px solid #28a745 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats Row — same as your dashboard pattern -->
+<div class="row mb-3">
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-primary h-100">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="h3 text-primary mb-0">{{ total_trainings }}</div>
+          <small class="text-muted">Total Trainings</small>
+        </div>
+        <i class="fas fa-graduation-cap fa-2x text-primary opacity-50"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-success h-100">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="h3 text-success mb-0">{{ active_count }}</div>
+          <small class="text-muted">Active Certificates</small>
+        </div>
+        <i class="fas fa-certificate fa-2x text-success opacity-50"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-warning h-100">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="h3 text-warning mb-0">{{ expiring_soon_count }}</div>
+          <small class="text-muted">Expiring in 30 Days</small>
+        </div>
+        <i class="fas fa-clock fa-2x text-warning opacity-50"></i>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-danger h-100">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="h3 text-danger mb-0">{{ expired_count }}</div>
+          <small class="text-muted">Expired</small>
+        </div>
+        <i class="fas fa-times-circle fa-2x text-danger opacity-50"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+
+  <!-- Training Records Table -->
+  <div class="col-md-8 mb-4">
+    <div class="ehs-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-id-card mr-2"></i>My Training Certificates
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if records %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr>
+                <th>Topic</th>
+                <th>Certificate #</th>
+                <th>Completed</th>
+                <th>Valid Until</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for record in records %}
+              <tr class="
+                {% if record.days_until_expiry <= 7 %}expiry-critical
+                {% elif record.days_until_expiry <= 30 %}expiry-warning
+                {% else %}expiry-ok{% endif %}">
+                <td>
+                  <strong>{{ record.topic.name }}</strong><br>
+                  <small class="text-muted">{{ record.topic.get_category_display }}</small>
+                </td>
+                <td>
+                  <code>{{ record.certificate_number }}</code>
+                  {% if record.added_manually %}
+                    <span class="badge badge-secondary ml-1">Manual</span>
+                  {% endif %}
+                </td>
+                <td>{{ record.completed_date|date:"d M Y" }}</td>
+                <td>
+                  {{ record.valid_until|date:"d M Y" }}
+                  {% if record.days_until_expiry <= 30 and record.days_until_expiry > 0 %}
+                    <br><span class="badge badge-warning">{{ record.days_until_expiry }}d left</span>
+                  {% elif record.days_until_expiry <= 0 %}
+                    <br><span class="badge badge-danger">Expired</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if record.status == 'ACTIVE' and record.days_until_expiry > 0 %}
+                    <span class="badge badge-success">Active</span>
+                  {% elif record.status == 'EXPIRED' or record.days_until_expiry <= 0 %}
+                    <span class="badge badge-danger">Expired</span>
+                  {% else %}
+                    <span class="badge badge-secondary">{{ record.status }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="card-footer">
+          <nav>
+            <ul class="pagination pagination-sm mb-0 justify-content-center">
+              {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    <i class="fas fa-chevron-left"></i>
+                  </a>
+                </li>
+              {% endif %}
+              <li class="page-item active">
+                <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+              </li>
+              {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    <i class="fas fa-chevron-right"></i>
+                  </a>
+                </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="fas fa-graduation-cap fa-3x mb-2"></i>
+          <p>No training records found yet.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming Sessions I'm Invited To -->
+  <div class="col-md-4 mb-4">
+    <div class="ehs-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-calendar-check mr-2 text-primary"></i>Upcoming Sessions
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if upcoming_sessions %}
+          <ul class="list-group list-group-flush">
+            {% for p in upcoming_sessions %}
+            <li class="list-group-item">
+              <a href="{% url 'training:session_detail' p.session.pk %}" class="text-decoration-none">
+                <strong class="d-block">{{ p.session.topic.name }}</strong>
+                <small class="text-muted">
+                  {{ p.session.scheduled_date|date:"d M Y" }} at {{ p.session.scheduled_time|time:"H:i" }}
+                </small><br>
+                <small class="text-muted">{{ p.session.plant.name }}</small>
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-calendar-times fa-2x mb-1"></i>
+            <p class="small">No upcoming sessions</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

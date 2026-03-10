@@ -652,15 +652,96 @@
         </li>
         {% endif %}  {% endcomment %}
 
-        {% comment %} {% if user.can_access_reports_module %}
-        <li class="nav-item">
-          <a href="#" class="nav-link">
-            <i class="nav-icon fas fa-chart-bar"></i>
-            <p>Reports & Analytics</p>
+       <!-- 11. SAFETY TRAINING MANAGEMENT -->
+        {% if user.can_access_training_module %}
+        <li class="nav-item {% if 'training' in request.path %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if 'training' in request.path %}active{% endif %}">
+            <i class="nav-icon fas fa-chalkboard-teacher"></i>
+            <p>Training Management <i class="right fas fa-angle-left"></i></p>
           </a>
-        </li>
-        {% endif %} {% endcomment %}
+          <ul class="nav nav-treeview">
 
+            <li class="nav-item">
+              <a href="{% url 'training:dashboard' %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'dashboard' and 'training' in request.path %}active{% endif %}">
+                <i class="nav-icon far fa-circle"></i>
+                <p>Dashboard</p>
+              </a>
+            </li>
+
+            {% if user.can_create_training_session or user.is_superuser %}
+            <li class="nav-item">
+              <a href="{% url 'training:session_create' %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'session_create' %}active{% endif %}">
+                <i class="nav-icon far fa-circle"></i>
+                <p>Schedule Session</p>
+              </a>
+            </li>
+            {% endif %}
+
+            <li class="nav-item">
+              <a href="{% url 'training:session_list' %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'session_list' %}active{% endif %}">
+                <i class="nav-icon far fa-circle"></i>
+                <p>All Sessions</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="{% url 'training:my_trainings' %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'my_trainings' %}active{% endif %}">
+                <i class="nav-icon fas fa-graduation-cap"></i>
+                <p>My Trainings</p>
+              </a>
+            </li>
+
+            {% if user.can_view_training_compliance or user.is_superuser %}
+            <li class="nav-item">
+              <a href="{% url 'training:compliance' %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'compliance' %}active{% endif %}">
+                <i class="nav-icon far fa-circle"></i>
+                <p>Compliance Matrix</p>
+              </a>
+            </li>
+            {% endif %}
+
+            <li class="nav-item">
+              <a href="{% url 'training:record_list' %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'record_list' %}active{% endif %}">
+                <i class="nav-icon far fa-circle"></i>
+                <p>Certificates</p>
+              </a>
+            </li>
+
+            <li class="nav-item">
+              <a href="{% url 'training:notifications' %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+                <i class="nav-icon fas fa-bell"></i>
+                <p>
+                  Notifications
+                  {# Uncomment below once TrainingNotification unread count is in context #}
+                  {% comment %}
+                  {% if training_unread_count > 0 %}
+                    <span class="badge badge-danger right">{{ training_unread_count }}</span>
+                  {% endif %}
+                  {% endcomment %}
+                </p>
+              </a>
+            </li>
+
+            {% if user.can_manage_training_topics or user.is_superuser %}
+            <li class="nav-item">
+              <a href="{% url 'training:topic_list' %}"
+                 class="nav-link {% if request.resolver_match.url_name == 'topic_list' %}active{% endif %}">
+                <i class="nav-icon far fa-circle"></i>
+                <p>Manage Topics</p>
+              </a>
+            </li>
+            {% endif %}
+
+          </ul>
+        </li>
+        {% endif %}
       </ul>
     </nav>
   </div>

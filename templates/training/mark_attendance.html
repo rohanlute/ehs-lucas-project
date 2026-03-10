@@ -1,0 +1,338 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Mark Attendance — {{ session.session_number }}{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:dashboard' %}">Training</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:session_list' %}">Sessions</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:session_detail' session.pk %}">{{ session.session_number }}</a></li>
+<li class="breadcrumb-item active">Mark Attendance</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .attendance-row-present { background-color: #f0fff4; }
+  .attendance-row-absent  { background-color: #fff5f5; }
+  .attendance-row-partial { background-color: #fffbf0; }
+  .score-input {
+    width: 80px;
+    display: inline-block;
+  }
+  .passing-score-badge {
+    font-size: 0.85rem;
+  }
+  .readonly-field { background-color: #e9ecef; cursor: not-allowed; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-12">
+    <div class="ehs-card">
+      <div class="card-header bg-success text-white">
+        <h3 class="card-title mb-0">
+          <i class="fas fa-user-check mr-2"></i>
+          Mark Attendance — {{ session.session_number }}
+        </h3>
+      </div>
+
+      <!-- Session Info Bar -->
+      <div class="card-body border-bottom pb-3">
+        <div class="row">
+          <div class="col-md-3">
+            <small class="text-muted d-block">Topic</small>
+            <strong>{{ session.topic.name }}</strong>
+          </div>
+          <div class="col-md-2">
+            <small class="text-muted d-block">Date</small>
+            <strong>{{ session.scheduled_date|date:"d M Y" }}</strong>
+          </div>
+          <div class="col-md-2">
+            <small class="text-muted d-block">Location</small>
+            <strong>{{ session.plant.name }}</strong>
+          </div>
+          <div class="col-md-2">
+            <small class="text-muted d-block">Trainer</small>
+            <strong>{{ session.trainer_name }}</strong>
+          </div>
+          <div class="col-md-3">
+            <small class="text-muted d-block">Passing Score</small>
+            <span class="badge badge-info passing-score-badge">
+              <i class="fas fa-percentage mr-1"></i>{{ session.topic.passing_score }}% required to pass
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <form method="POST" id="attendanceForm">
+        {% csrf_token %}
+        <div class="card-body">
+
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle mr-2"></i>
+            Mark attendance and assessment scores for each participant.
+            Participants marked <strong>Present</strong> with score ≥ <strong>{{ session.topic.passing_score }}%</strong>
+            will automatically receive a training certificate on session completion.
+          </div>
+
+          {% if participants %}
+
+          <!-- Bulk Actions -->
+          <div class="mb-3 d-flex align-items-center gap-2">
+            <strong class="mr-3">Bulk Mark:</strong>
+            <button type="button" class="btn btn-sm btn-success mr-2" id="markAllPresent">
+              <i class="fas fa-check-circle mr-1"></i> All Present
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" id="markAllAbsent">
+              <i class="fas fa-times-circle mr-1"></i> All Absent
+            </button>
+            <span class="ml-3 text-muted small">
+              Total: <strong id="totalCount">{{ participants.count }}</strong> &nbsp;|&nbsp;
+              Present: <strong id="presentCount" class="text-success">0</strong> &nbsp;|&nbsp;
+              Absent: <strong id="absentCount" class="text-danger">0</strong>
+            </span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-bordered" id="attendanceTable">
+              <thead class="thead-dark">
+                <tr>
+                  <th style="width:40px">#</th>
+                  <th>Employee</th>
+                  <th>Department</th>
+                  <th>Attendance <span class="text-danger">*</span></th>
+                  <th>Assessment Score (%)</th>
+                  <th>Result</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for participant in participants %}
+                <tr id="row_{{ participant.id }}" class="attendance-row
+                  {% if participant.attendance_status == 'PRESENT' %}attendance-row-present
+                  {% elif participant.attendance_status == 'ABSENT' %}attendance-row-absent
+                  {% elif participant.attendance_status == 'PARTIAL' %}attendance-row-partial{% endif %}">
+
+                  <td>{{ forloop.counter }}</td>
+
+                  <td>
+                    <strong>{{ participant.employee.get_full_name }}</strong><br>
+                    <small class="text-muted">{{ participant.employee.employee_id }}</small>
+                  </td>
+
+                  <td>
+                    <small>{{ participant.employee.department.name|default:"—" }}</small>
+                  </td>
+
+                  <!-- Attendance Radio Buttons -->
+                  <td>
+                    <div class="d-flex flex-column">
+                      <div class="form-check mb-1">
+                        <input class="form-check-input attendance-radio" type="radio"
+                               name="attendance_{{ participant.id }}"
+                               id="present_{{ participant.id }}"
+                               value="PRESENT" data-row="{{ participant.id }}"
+                               {% if participant.attendance_status == 'PRESENT' %}checked{% endif %}>
+                        <label class="form-check-label text-success font-weight-bold" for="present_{{ participant.id }}">
+                          <i class="fas fa-check-circle"></i> Present
+                        </label>
+                      </div>
+                      <div class="form-check mb-1">
+                        <input class="form-check-input attendance-radio" type="radio"
+                               name="attendance_{{ participant.id }}"
+                               id="absent_{{ participant.id }}"
+                               value="ABSENT" data-row="{{ participant.id }}"
+                               {% if participant.attendance_status == 'ABSENT' or participant.attendance_status == 'INVITED' %}checked{% endif %}>
+                        <label class="form-check-label text-danger font-weight-bold" for="absent_{{ participant.id }}">
+                          <i class="fas fa-times-circle"></i> Absent
+                        </label>
+                      </div>
+                      <div class="form-check">
+                        <input class="form-check-input attendance-radio" type="radio"
+                               name="attendance_{{ participant.id }}"
+                               id="partial_{{ participant.id }}"
+                               value="PARTIAL" data-row="{{ participant.id }}"
+                               {% if participant.attendance_status == 'PARTIAL' %}checked{% endif %}>
+                        <label class="form-check-label text-warning font-weight-bold" for="partial_{{ participant.id }}">
+                          <i class="fas fa-adjust"></i> Partial
+                        </label>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- Score Input -->
+                  <td class="text-center">
+                    <input type="number"
+                           class="form-control score-input score-field"
+                           name="score_{{ participant.id }}"
+                           id="score_{{ participant.id }}"
+                           min="0" max="100"
+                           placeholder="0-100"
+                           data-row="{{ participant.id }}"
+                           data-passing="{{ session.topic.passing_score }}"
+                           value="{{ participant.assessment_score|default:'' }}">
+                    <small class="text-muted">Pass ≥ {{ session.topic.passing_score }}%</small>
+                  </td>
+
+                  <!-- Result (auto calculated) -->
+                  <td class="text-center result-cell" id="result_{{ participant.id }}">
+                    {% if participant.passed is None %}
+                      <span class="text-muted">—</span>
+                    {% elif participant.passed %}
+                      <span class="badge badge-success"><i class="fas fa-check"></i> Pass</span>
+                    {% else %}
+                      <span class="badge badge-danger"><i class="fas fa-times"></i> Fail</span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Remarks -->
+                  <td>
+                    <input type="text" class="form-control form-control-sm"
+                           name="remarks_{{ participant.id }}"
+                           placeholder="Optional remarks"
+                           value="{{ participant.remarks|default:'' }}">
+                  </td>
+
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          {% else %}
+          <div class="alert alert-warning text-center">
+            <i class="fas fa-user-slash fa-2x mb-2 d-block"></i>
+            <strong>No participants found.</strong>
+            <a href="{% url 'training:add_participants' session.pk %}" class="btn btn-sm btn-primary ml-2">
+              Add Participants First
+            </a>
+          </div>
+          {% endif %}
+
+        </div>
+
+        {% if participants %}
+        <div class="card-footer">
+          <button type="submit" class="btn btn-success btn-lg" id="saveAttendanceBtn">
+            <i class="fas fa-save mr-2"></i>Save Attendance
+          </button>
+          <a href="{% url 'training:session_detail' session.pk %}" class="btn btn-secondary btn-lg ml-2">
+            <i class="fas fa-times mr-2"></i>Cancel
+          </a>
+          <small class="text-muted ml-3">
+            <i class="fas fa-info-circle mr-1"></i>
+            Attendance is saved but session remains <strong>SCHEDULED</strong> until you click "Complete Session" on the detail page.
+          </small>
+        </div>
+        {% endif %}
+
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const passingScore = {{ session.topic.passing_score }};
+    let isSubmitting = false;
+
+    // ── Row color update when attendance changes ──
+    function updateRowColor(rowId, attendance) {
+        const row = document.getElementById('row_' + rowId);
+        if (!row) return;
+        row.classList.remove('attendance-row-present', 'attendance-row-absent', 'attendance-row-partial');
+        if (attendance === 'PRESENT') row.classList.add('attendance-row-present');
+        else if (attendance === 'ABSENT') row.classList.add('attendance-row-absent');
+        else if (attendance === 'PARTIAL') row.classList.add('attendance-row-partial');
+        updateCounters();
+    }
+
+    // ── Result badge update when score changes ──
+    function updateResult(rowId, score) {
+        const resultCell = document.getElementById('result_' + rowId);
+        if (!resultCell) return;
+        const attendanceRadio = document.querySelector(`input[name="attendance_${rowId}"]:checked`);
+        const isPresent = attendanceRadio && attendanceRadio.value === 'PRESENT';
+
+        if (!isPresent || score === '' || score === null) {
+            resultCell.innerHTML = '<span class="text-muted">—</span>';
+            return;
+        }
+        const scoreNum = parseInt(score);
+        if (scoreNum >= passingScore) {
+            resultCell.innerHTML = '<span class="badge badge-success"><i class="fas fa-check"></i> Pass</span>';
+        } else {
+            resultCell.innerHTML = '<span class="badge badge-danger"><i class="fas fa-times"></i> Fail</span>';
+        }
+    }
+
+    // ── Live counter ──
+    function updateCounters() {
+        let present = 0, absent = 0;
+        document.querySelectorAll('.attendance-radio:checked').forEach(function (radio) {
+            if (radio.value === 'PRESENT') present++;
+            else if (radio.value === 'ABSENT' || radio.value === 'PARTIAL') absent++;
+        });
+        document.getElementById('presentCount').textContent = present;
+        document.getElementById('absentCount').textContent = absent;
+    }
+
+    // Bind attendance radios
+    document.querySelectorAll('.attendance-radio').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            updateRowColor(this.dataset.row, this.value);
+            const scoreInput = document.getElementById('score_' + this.dataset.row);
+            if (scoreInput) updateResult(this.dataset.row, scoreInput.value);
+        });
+    });
+
+    // Bind score inputs
+    document.querySelectorAll('.score-field').forEach(function (input) {
+        input.addEventListener('input', function () {
+            updateResult(this.dataset.row, this.value);
+        });
+    });
+
+    // ── Bulk Mark ──
+    document.getElementById('markAllPresent').addEventListener('click', function () {
+        document.querySelectorAll('.attendance-radio').forEach(function (radio) {
+            if (radio.value === 'PRESENT') {
+                radio.checked = true;
+                updateRowColor(radio.dataset.row, 'PRESENT');
+            }
+        });
+        updateCounters();
+    });
+
+    document.getElementById('markAllAbsent').addEventListener('click', function () {
+        document.querySelectorAll('.attendance-radio').forEach(function (radio) {
+            if (radio.value === 'ABSENT') {
+                radio.checked = true;
+                updateRowColor(radio.dataset.row, 'ABSENT');
+            }
+        });
+        updateCounters();
+    });
+
+    // ── Initial counter ──
+    updateCounters();
+
+    // ── Prevent double submit ──
+    document.getElementById('attendanceForm').addEventListener('submit', function (e) {
+        if (isSubmitting) { e.preventDefault(); return; }
+        isSubmitting = true;
+        const btn = document.getElementById('saveAttendanceBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Training Notifications{% endblock %}
+{% block page_title %}Training Notifications{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:dashboard' %}">Training</a></li>
+<li class="breadcrumb-item active">Notifications</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-12 d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      Notifications
+      {% if unread_count > 0 %}
+        <span class="badge badge-danger ml-2">{{ unread_count }} Unread</span>
+      {% endif %}
+    </h5>
+    {% if unread_count > 0 %}
+    <form method="POST" action="{% url 'training:notifications_read_all' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-check-double mr-1"></i>Mark All Read
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="ehs-card">
+  <div class="card-body p-0">
+    {% if notifications %}
+    <ul class="list-group list-group-flush">
+      {% for notif in notifications %}
+      <li class="list-group-item {% if not notif.is_read %}bg-light{% endif %}">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center mb-1">
+              {% if not notif.is_read %}
+                <span class="badge badge-primary mr-2">New</span>
+              {% endif %}
+              <strong>{{ notif.get_notification_type_display }}</strong>
+            </div>
+            <p class="mb-1 text-muted">{{ notif.message }}</p>
+            {% if notif.session %}
+              <small>
+                <a href="{% url 'training:session_detail' notif.session.pk %}">
+                  <i class="fas fa-link mr-1"></i>{{ notif.session.session_number }}
+                </a>
+              </small>
+            {% endif %}
+            <br>
+            <small class="text-muted">{{ notif.created_at|timesince }} ago</small>
+          </div>
+          <div class="ml-3">
+            {% if not notif.is_read %}
+            <button class="btn btn-sm btn-outline-secondary mark-read-btn"
+                    data-url="{% url 'training:notification_read' notif.pk %}"
+                    data-id="{{ notif.pk }}">
+              <i class="fas fa-check"></i> Mark Read
+            </button>
+            {% else %}
+              <small class="text-muted"><i class="fas fa-check-circle text-success"></i> Read</small>
+            {% endif %}
+          </div>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+
+    {% if is_paginated %}
+    <div class="card-footer">
+      <nav>
+        <ul class="pagination pagination-sm mb-0 justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                <i class="fas fa-chevron-left"></i>
+              </a>
+            </li>
+          {% endif %}
+          <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          </li>
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                <i class="fas fa-chevron-right"></i>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="fas fa-bell-slash fa-3x mb-2"></i>
+      <p>No notifications yet.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.mark-read-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        const url = this.dataset.url;
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrf ? csrf.value : '',
+                'Content-Type': 'application/json'
+            }
+        }).then(function () {
+            location.reload();
+        });
+    });
+});
+</script>
+{% endblock %}
