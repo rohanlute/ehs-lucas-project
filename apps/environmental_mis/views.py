@@ -4,12 +4,20 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from apps.organizations.models import Plant
-from .models import SafetyIndicatorEntry, WasteReportData, WasteSummary
-from .report_structure import LAGGING_INDICATOR, LEADING_INDICATOR, MANUFACTURING_WASTE_STRUCTURE
+from .models import SafetyIndicatorEntry, WasteReportData, WasteSummary, EnvironmentEntry
+from .report_structure import LAGGING_INDICATOR, LEADING_INDICATOR, MANUFACTURING_WASTE_STRUCTURE, MANUFACTURING_ENVIRONMENT_STRUCTURE, NON_MANUFACTURING_ENVIRONMENT_STRUCTURE
 from django.db.models import Sum
-from .models import EnvironmentEntry
+from django.views.decorators.csrf import csrf_exempt
+
+import openpyxl
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+from openpyxl.styles import Font, Alignment, PatternFill
 
 
+# ===============================
+# WASTE REPORT SR 
+# ===============================
 def prepare_waste_rows(structure):
 
     rows = []
@@ -30,7 +38,9 @@ def prepare_waste_rows(structure):
 
     return rows
 
-
+# ===============================
+# WASTE REPORT VIEW 
+# ===============================
 
 def manufacturing_waste_report(request):
 
@@ -140,19 +150,9 @@ def manufacturing_waste_report(request):
     )
 
 
-import json
-from django.http import JsonResponse
-from django.utils import timezone
-from .models import WasteReportData, WasteSummary
-from apps.organizations.models import Plant
-
-from django.http import JsonResponse
-from django.utils import timezone
-import json
-
-from .models import WasteReportData, WasteSummary
-from apps.organizations.models import Plant
-
+# ===============================
+# WASTE REPORT SAVE 
+# ===============================
 
 def save_waste_report(request):
 
@@ -220,25 +220,9 @@ def save_waste_report(request):
     return JsonResponse({"status":"success"})
 
 
-import json
-
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
-from apps.organizations.models import Plant
-from .models import EnvironmentEntry
-
-
 # ===============================
-# ENVIRONMENT REPORT PAGE
+# ENVIRONMENT REPORT SR 
 # ===============================
-from django.shortcuts import render
-from django.utils import timezone
-from .report_structure import (
-    MANUFACTURING_ENVIRONMENT_STRUCTURE,
-    NON_MANUFACTURING_ENVIRONMENT_STRUCTURE
-)
 
 def prepare_rows(structure):
 
@@ -317,8 +301,9 @@ def prepare_rows(structure):
 
     return rows
 
-
-from .models import EnvironmentEntry
+# ===============================
+# ENVIRONMENT REPORT VIEW 
+# ===============================
 
 def environment_report(request):
 
@@ -382,8 +367,9 @@ def environment_report(request):
 
 
 # ===============================
-# SAVE DATA API
+# ENVIRONMENT REPORT SAVE 
 # ===============================
+
 def save_environment_report(request):
 
     if request.method != "POST":
@@ -442,14 +428,123 @@ def save_environment_report(request):
 
 
 # ===============================
-# ANALYTICAL DASHBOARD
+# SAFETY REPORT VIEW 
 # ===============================
 
-from django.shortcuts import render
-from django.utils import timezone
-from apps.organizations.models import Plant
-from .models import EnvironmentEntry
+def safety_indicator(request):
 
+    user_plants = Plant.objects.all()
+
+    selected_type = request.GET.get("type", "LEADING_INDICATOR")
+    plant_id = request.GET.get("plant_id")
+
+    if plant_id:
+        plant = Plant.objects.get(id=plant_id)
+    else:
+        plant = user_plants.first()
+
+    year = timezone.now().year
+
+    leading_indicator_rows = prepare_rows(LEADING_INDICATOR)
+    lagging_indicator_rows = prepare_rows(LAGGING_INDICATOR)
+
+    months = [
+        "jan","feb","mar",
+        "apr","may","jun",
+        "jul","aug","sep",
+        "oct","nov","dec"
+    ]
+
+    report_type = (
+        "LEADING_INDICATOR"
+        if selected_type == "LEADING_INDICATOR"
+        else "LAGGING_INDICATOR"
+    )
+
+    # ================= LOAD SAVED DATA =================
+
+    saved_entries = SafetyIndicatorEntry.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=report_type
+    )
+
+    data_map = {
+        entry.row_name: entry
+        for entry in saved_entries
+    }
+
+    context = {
+        "leading_indicator_rows": leading_indicator_rows,
+        "lagging_indicator_rows": lagging_indicator_rows,
+        "months": months,
+        "selected_type": selected_type,
+        "selected_plant": plant,
+        "user_plants": user_plants,
+        "current_year": year,
+        "data_map": data_map
+    }
+
+    return render(
+        request,
+        "environmental_mis/safety_indicator.html",
+        context
+    )
+
+# ===============================
+# SAFETY REPORT SAVE 
+# ===============================
+
+def save_safety_indicator(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error"}, status=400)
+
+    data = json.loads(request.body)
+
+    plant_id = data.get("plant_id")
+    report_type = data.get("report_type")
+    year = timezone.now().year
+    
+    rows = data.get("rows", [])
+
+    plant = Plant.objects.get(id=plant_id)
+
+    if report_type == "LEADING_INDICATOR":
+        report_type = "LEADING_INDICATOR"
+    else:
+        report_type = "LAGGING_INDICATOR"
+
+    months = [
+        "jan_qty","feb_qty","mar_qty","apr_qty","may_qty","jun_qty",
+        "jul_qty","aug_qty","sep_qty","oct_qty","nov_qty","dec_qty"
+    ]
+
+    for row in rows:
+
+        row_name = row.get("row_name")
+
+        # Convert empty values to 0
+        for m in months:
+            val = row.get(m)
+            row[m] = float(val) if val not in ["", None] else 0
+
+        #calculate totals
+        row["total_quantity"] = sum(row[m] for m in months)
+
+        SafetyIndicatorEntry.objects.update_or_create(
+            plant=plant,
+            year=year,
+            report_type=report_type,
+            row_name=row_name,
+            defaults=row
+        )
+
+    return JsonResponse({"status": "success"})
+
+
+# ===============================
+# ANALYTICAL DASHBOARD ENVIRONMENT
+# ===============================
 
 def environment_dashboard(request):
 
@@ -670,128 +765,9 @@ def environment_dashboard(request):
         context
     )
 
-
-
-# 
-def safety_indicator(request):
-
-    user_plants = Plant.objects.all()
-
-    selected_type = request.GET.get("type", "LEADING_INDICATOR")
-    plant_id = request.GET.get("plant_id")
-
-    if plant_id:
-        plant = Plant.objects.get(id=plant_id)
-    else:
-        plant = user_plants.first()
-
-    year = timezone.now().year
-
-    leading_indicator_rows = prepare_rows(LEADING_INDICATOR)
-    lagging_indicator_rows = prepare_rows(LAGGING_INDICATOR)
-
-    months = [
-        "jan","feb","mar",
-        "apr","may","jun",
-        "jul","aug","sep",
-        "oct","nov","dec"
-    ]
-
-    report_type = (
-        "LEADING_INDICATOR"
-        if selected_type == "LEADING_INDICATOR"
-        else "LAGGING_INDICATOR"
-    )
-
-    # ================= LOAD SAVED DATA =================
-
-    saved_entries = SafetyIndicatorEntry.objects.filter(
-        plant=plant,
-        year=year,
-        report_type=report_type
-    )
-
-    data_map = {
-        entry.row_name: entry
-        for entry in saved_entries
-    }
-
-    context = {
-        "leading_indicator_rows": leading_indicator_rows,
-        "lagging_indicator_rows": lagging_indicator_rows,
-        "months": months,
-        "selected_type": selected_type,
-        "selected_plant": plant,
-        "user_plants": user_plants,
-        "current_year": year,
-        "data_map": data_map
-    }
-
-    return render(
-        request,
-        "environmental_mis/safety_indicator.html",
-        context
-    )
-
-
-
-def save_safety_indicator(request):
-    if request.method != "POST":
-        return JsonResponse({"status": "error"}, status=400)
-
-    data = json.loads(request.body)
-
-    plant_id = data.get("plant_id")
-    report_type = data.get("report_type")
-    year = timezone.now().year
-    
-    rows = data.get("rows", [])
-
-    plant = Plant.objects.get(id=plant_id)
-
-    if report_type == "LEADING_INDICATOR":
-        report_type = "LEADING_INDICATOR"
-    else:
-        report_type = "LAGGING_INDICATOR"
-
-    months = [
-        "jan_qty","feb_qty","mar_qty","apr_qty","may_qty","jun_qty",
-        "jul_qty","aug_qty","sep_qty","oct_qty","nov_qty","dec_qty"
-    ]
-
-    for row in rows:
-
-        row_name = row.get("row_name")
-
-        # Convert empty values to 0
-        for m in months:
-            val = row.get(m)
-            row[m] = float(val) if val not in ["", None] else 0
-
-        #calculate totals
-        row["total_quantity"] = sum(row[m] for m in months)
-
-        SafetyIndicatorEntry.objects.update_or_create(
-            plant=plant,
-            year=year,
-            report_type=report_type,
-            row_name=row_name,
-            defaults=row
-        )
-
-    return JsonResponse({"status": "success"})
-
-
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill
-from openpyxl.utils import get_column_letter
-from django.http import HttpResponse
-from django.utils import timezone
-
-from apps.organizations.models import Plant
-from .models import SafetyIndicatorEntry
-from .report_structure import LEADING_INDICATOR, LAGGING_INDICATOR
-
+# ===============================
+# ANALYTICAL DASHBOARD SAFETY
+# ===============================
 
 def download_safety_excel(request):
 
@@ -942,24 +918,9 @@ def download_safety_excel(request):
 
     return response
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-from django.shortcuts import render
-from django.utils import timezone
-from apps.organizations.models import Plant
-from .models import WasteSummary
-
+# ===============================
+# ANALYTICAL DASHBOARD WASTE
+# ===============================
 
 def waste_dashboard(request):
 
@@ -1057,28 +1018,9 @@ def waste_dashboard(request):
     )
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill
-from openpyxl.utils import get_column_letter
-from django.http import HttpResponse
-from django.utils import timezone
-
-from apps.organizations.models import Plant
-from .models import WasteReportData, WasteSummary
-from .report_structure import MANUFACTURING_WASTE_STRUCTURE
-
+# ===============================
+# WASTE EXCEL
+# ===============================
 
 def download_waste_excel(request):
 
@@ -1398,27 +1340,9 @@ def download_waste_excel(request):
 
     return response
 
-
-
-
-
-
-
-
-
-import openpyxl
-from openpyxl.styles import Font, Alignment, PatternFill
-from openpyxl.utils import get_column_letter
-from django.http import HttpResponse
-from django.utils import timezone
-
-from apps.organizations.models import Plant
-from .models import EnvironmentEntry
-from .report_structure import (
-    MANUFACTURING_ENVIRONMENT_STRUCTURE,
-    NON_MANUFACTURING_ENVIRONMENT_STRUCTURE,
-)
-
+# ===============================
+# ENVIRONMENT EXCEL
+# ===============================
 
 def download_environment_excel(request):
 
@@ -1575,17 +1499,9 @@ def download_environment_excel(request):
 
     return response
 
-
-
-
-
-
-
-from django.shortcuts import render
-from django.utils import timezone
-from apps.organizations.models import Plant
-from .models import SafetyIndicatorEntry
-
+# ===============================
+# SAFETY EXCEL
+# ===============================
 
 def safety_dashboard(request):
 
