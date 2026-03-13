@@ -1,0 +1,435 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Schedule Training Session{% endblock %}
+{% block page_title %}Schedule Training Session{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:dashboard' %}">Training Management</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:session_list' %}">Sessions</a></li>
+<li class="breadcrumb-item active">Schedule New Session</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .readonly-field {
+    background-color: #e9ecef;
+    cursor: not-allowed;
+  }
+  .section-divider {
+    border-left: 4px solid #007bff;
+    padding-left: 12px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #343a40;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-10 offset-md-1">
+    <div class="ehs-card">
+      <div class="card-header bg-primary text-white">
+        <h3 class="card-title mb-0">
+          <i class="fas fa-chalkboard-teacher mr-2"></i>Schedule New Training Session
+        </h3>
+      </div>
+
+      <form method="POST" id="sessionForm" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="card-body">
+
+          <!-- Alert -->
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle mr-2"></i>
+            <strong>Note:</strong> After creating the session, add participants and mark attendance after the session is conducted.
+            Fields marked <span class="text-danger">*</span> are mandatory.
+          </div>
+
+          <!-- Form Errors -->
+          {% if form.errors %}
+          <div class="alert alert-danger alert-dismissible fade show">
+            <h6><i class="fas fa-exclamation-triangle mr-2"></i>Please fix the errors below:</h6>
+            <ul class="mb-0">
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+              {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </ul>
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+          </div>
+          {% endif %}
+
+          <!-- Section 1: Training Info -->
+          <h5 class="section-divider"><i class="fas fa-book mr-2"></i>Training Information</h5>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="id_topic">Training Topic <span class="text-danger">*</span></label>
+              <select name="topic" id="id_topic" class="form-control" required>
+                <option value="">-- Select Training Topic --</option>
+                {% for topic in active_topics %}
+                  <option value="{{ topic.id }}"
+                    data-validity="{{ topic.validity_period_days }}"
+                    data-mandatory="{{ topic.is_mandatory }}"
+                    {% if form.topic.value == topic.id|stringformat:"s" %}selected{% endif %}>
+                    {{ topic.name }} ({{ topic.code }})
+                  </option>
+                {% endfor %}
+              </select>
+              {% if form.topic.errors %}
+                <div class="text-danger small">{{ form.topic.errors }}</div>
+              {% endif %}
+              <small class="form-text text-muted">
+                <span id="topicValidity"></span>
+              </small>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="id_training_mode">Training Mode <span class="text-danger">*</span></label>
+              {{ form.training_mode }}
+              {% if form.training_mode.errors %}
+                <div class="text-danger small">{{ form.training_mode.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Section 2: Schedule -->
+          <hr>
+          <h5 class="section-divider"><i class="fas fa-calendar-alt mr-2"></i>Schedule</h5>
+          <div class="row">
+            <div class="col-md-3 mb-3">
+              <label for="id_scheduled_date">Scheduled Date <span class="text-danger">*</span></label>
+              {{ form.scheduled_date }}
+              {% if form.scheduled_date.errors %}
+                <div class="text-danger small">{{ form.scheduled_date.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-3 mb-3">
+              <label for="id_scheduled_time">Start Time <span class="text-danger">*</span></label>
+              {{ form.scheduled_time }}
+              {% if form.scheduled_time.errors %}
+                <div class="text-danger small">{{ form.scheduled_time.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-3 mb-3">
+              <label for="id_end_time">End Time</label>
+              {{ form.end_time }}
+            </div>
+
+            <div class="col-md-3 mb-3">
+              <label for="id_max_participants">Max Participants</label>
+              {{ form.max_participants }}
+            </div>
+          </div>
+
+          <!-- Section 3: Location — EXACT same pattern as your incident_create.html -->
+          <hr>
+          <h5 class="section-divider"><i class="fas fa-map-marker-alt mr-2"></i>Location Information</h5>
+          <div class="row">
+
+            <!-- Plant -->
+            <div class="col-md-3 mb-3">
+              <label for="id_plant">Plant <span class="text-danger">*</span></label>
+              {% if user_assigned_plants.count == 1 %}
+                <input type="text" class="form-control readonly-field"
+                       value="{{ user_assigned_plants.first.name }} ({{ user_assigned_plants.first.code }})"
+                       readonly>
+                <input type="hidden" name="plant" id="id_plant" value="{{ user_assigned_plants.first.id }}">
+              {% else %}
+                {{ form.plant }}
+              {% endif %}
+              {% if form.plant.errors %}
+                <div class="text-danger small">{{ form.plant.errors }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Zone -->
+            <div class="col-md-3 mb-3">
+              <label for="id_zone">Zone</label>
+              {% if user_assigned_zones.count == 1 %}
+                <input type="text" class="form-control readonly-field"
+                       value="{{ user_assigned_zones.first.name }} ({{ user_assigned_zones.first.code }})"
+                       readonly>
+                <input type="hidden" name="zone" id="id_zone" value="{{ user_assigned_zones.first.id }}">
+              {% else %}
+                {{ form.zone }}
+              {% endif %}
+              {% if form.zone.errors %}
+                <div class="text-danger small">{{ form.zone.errors }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Location -->
+            <div class="col-md-3 mb-3">
+              <label for="id_location">Location <span class="text-danger">*</span></label>
+              {% if user_assigned_locations.count == 1 %}
+                <input type="text" class="form-control readonly-field"
+                       value="{{ user_assigned_locations.first.name }} ({{ user_assigned_locations.first.code }})"
+                       readonly>
+                <input type="hidden" name="location" id="id_location" value="{{ user_assigned_locations.first.id }}">
+              {% else %}
+                {{ form.location }}
+              {% endif %}
+              {% if form.location.errors %}
+                <div class="text-danger small">{{ form.location.errors }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Sub-Location -->
+            <div class="col-md-3 mb-3">
+              <label for="id_sublocation">Sub-Location</label>
+              {% if user_assigned_sublocations.count == 1 %}
+                <input type="text" class="form-control readonly-field"
+                       value="{{ user_assigned_sublocations.first.name }}"
+                       readonly>
+                <input type="hidden" name="sublocation" id="id_sublocation" value="{{ user_assigned_sublocations.first.id }}">
+              {% else %}
+                {{ form.sublocation }}
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label for="id_venue_details">Venue Details</label>
+              {{ form.venue_details }}
+              <small class="form-text text-muted">e.g. Conference Room A, Shop Floor Gate 2</small>
+            </div>
+          </div>
+
+          <!-- Section 4: Trainer -->
+          <hr>
+          <h5 class="section-divider"><i class="fas fa-user-tie mr-2"></i>Trainer Information</h5>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label for="id_trainer_name">Trainer Name <span class="text-danger">*</span></label>
+              {{ form.trainer_name }}
+              {% if form.trainer_name.errors %}
+                <div class="text-danger small">{{ form.trainer_name.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label for="id_trainer_designation">Trainer Designation</label>
+              {{ form.trainer_designation }}
+            </div>
+
+            <div class="col-md-4 mb-3">
+              <label class="d-block">Trainer Type</label>
+              <div class="form-check mt-2">
+                {{ form.trainer_is_external }}
+                <label class="form-check-label" for="id_trainer_is_external">
+                  External Trainer (from outside organization)
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="row" id="externalOrgRow" style="display:none;">
+            <div class="col-md-6 mb-3">
+              <label for="id_trainer_organization">Trainer's Organization</label>
+              {{ form.trainer_organization }}
+              <small class="form-text text-muted">Only if external trainer</small>
+            </div>
+          </div>
+
+          <!-- Section 5: Agenda & Material -->
+          <hr>
+          <h5 class="section-divider"><i class="fas fa-file-alt mr-2"></i>Session Details</h5>
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label for="id_agenda">Agenda / Topics to Cover</label>
+              {{ form.agenda }}
+              <small class="form-text text-muted">List the topics and activities planned for this session</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="id_attachment">Training Material (Optional)</label>
+              {{ form.attachment }}
+              <small class="form-text text-muted">Upload presentation, PDF, or any reference material</small>
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="id_remarks">Additional Remarks</label>
+              {{ form.remarks }}
+            </div>
+          </div>
+
+          <!-- Reported By (readonly like your incident form) -->
+          <hr>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>Created By</label>
+              <input type="text" class="form-control readonly-field"
+                     value="{{ request.user.get_full_name|default:request.user.username }}" readonly>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label>Created On</label>
+              <input type="text" class="form-control readonly-field"
+                     value="{% now 'd/m/Y H:i' %}" readonly>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+            <i class="fas fa-calendar-plus mr-2"></i>Schedule Training Session
+          </button>
+          <a href="{{ cancel_url }}" class="btn btn-secondary btn-lg ml-2">
+            <i class="fas fa-times mr-2"></i>Cancel
+          </a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('sessionForm');
+    let isSubmitting = false;
+
+    // ── Topic info display ──
+    const topicSelect = document.getElementById('id_topic');
+    const topicValidity = document.getElementById('topicValidity');
+
+    topicSelect.addEventListener('change', function () {
+        const option = this.options[this.selectedIndex];
+        if (option.value) {
+            const days = option.getAttribute('data-validity');
+            const mandatory = option.getAttribute('data-mandatory');
+            topicValidity.innerHTML =
+                `Validity: <strong>${days} days</strong>` +
+                (mandatory === 'True' ? ' &nbsp;|&nbsp; <span class="badge badge-danger">Mandatory</span>' : '');
+        } else {
+            topicValidity.innerHTML = '';
+        }
+    });
+
+    // ── External trainer toggle ──
+    const externalCheckbox = document.getElementById('id_trainer_is_external');
+    const externalOrgRow = document.getElementById('externalOrgRow');
+
+    if (externalCheckbox) {
+        externalCheckbox.addEventListener('change', function () {
+            externalOrgRow.style.display = this.checked ? 'flex' : 'none';
+        });
+    }
+
+    // ── Set today as default date ──
+    const dateInput = document.getElementById('id_scheduled_date');
+    if (dateInput && !dateInput.value) {
+        const today = new Date();
+        dateInput.value = today.toISOString().split('T')[0];
+    }
+
+    // ── AJAX location chain — EXACTLY like your incident_create.html ──
+    const plantSelect = document.getElementById('id_plant');
+    const zoneSelect = document.getElementById('id_zone');
+    const locationSelect = document.getElementById('id_location');
+    const sublocationSelect = document.getElementById('id_sublocation');
+
+    function resetSelect(el, text) {
+        if (el) el.innerHTML = `<option value="">-- ${text} --</option>`;
+    }
+
+    if (plantSelect) {
+        plantSelect.addEventListener('change', function () {
+            const plantId = this.value;
+            resetSelect(zoneSelect, 'Select Zone');
+            resetSelect(locationSelect, 'Select Zone First');
+            resetSelect(sublocationSelect, 'Select Location First');
+
+            if (plantId) {
+                fetch(`{% url 'training:ajax_get_zones' %}?plant_id=${plantId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.forEach(z => {
+                            const opt = new Option(`${z.name} (${z.code})`, z.id);
+                            zoneSelect.add(opt);
+                        });
+                    });
+            }
+        });
+    }
+
+    if (zoneSelect) {
+        zoneSelect.addEventListener('change', function () {
+            const zoneId = this.value;
+            resetSelect(locationSelect, 'Select Location');
+            resetSelect(sublocationSelect, 'Select Location First');
+
+            if (zoneId) {
+                fetch(`{% url 'training:ajax_get_locations' %}?zone_id=${zoneId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.forEach(l => {
+                            const opt = new Option(`${l.name} (${l.code})`, l.id);
+                            locationSelect.add(opt);
+                        });
+                    });
+            }
+        });
+    }
+
+    if (locationSelect) {
+        locationSelect.addEventListener('change', function () {
+            const locationId = this.value;
+            resetSelect(sublocationSelect, 'Select Sub-Location');
+
+            if (locationId) {
+                fetch(`{% url 'training:ajax_get_sublocations' %}?location_id=${locationId}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.forEach(s => {
+                            const opt = new Option(s.code ? `${s.name} (${s.code})` : s.name, s.id);
+                            sublocationSelect.add(opt);
+                        });
+                    });
+            }
+        });
+    }
+
+    // Trigger on page load if pre-selected (single assignment case)
+    if (plantSelect && plantSelect.value) {
+        plantSelect.dispatchEvent(new Event('change'));
+        setTimeout(() => {
+            if (zoneSelect && zoneSelect.value) {
+                zoneSelect.dispatchEvent(new Event('change'));
+                setTimeout(() => {
+                    if (locationSelect && locationSelect.value) {
+                        locationSelect.dispatchEvent(new Event('change'));
+                    }
+                }, 200);
+            }
+        }, 200);
+    }
+
+    // ── Prevent double submit ──
+    form.addEventListener('submit', function (e) {
+        if (isSubmitting) { e.preventDefault(); return false; }
+        isSubmitting = true;
+        const btn = document.getElementById('submitBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Scheduling...';
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Training Topics{% endblock %}
+{% block page_title %}Training Topics{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:dashboard' %}">Training</a></li>
+<li class="breadcrumb-item active">Topics</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-12 d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">Training Topics Master List</h5>
+    {% if request.user.can_manage_training_topics or request.user.is_superuser %}
+    <a href="{% url 'training:topic_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus mr-1"></i> Add Topic
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filter -->
+<div class="ehs-card mb-3">
+  <div class="card-body py-2">
+    <form method="GET" class="form-inline flex-wrap">
+      <input type="text" name="search" class="form-control form-control-sm mr-2 mb-1"
+             placeholder="Search topic..." value="{{ search_query }}">
+      <select name="category" class="form-control form-control-sm mr-2 mb-1">
+        <option value="">All Categories</option>
+        {% for val, label in category_choices %}
+          <option value="{{ val }}" {% if selected_category == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-sm btn-primary mr-2 mb-1">
+        <i class="fas fa-filter mr-1"></i>Filter
+      </button>
+      <a href="{% url 'training:topic_list' %}" class="btn btn-sm btn-outline-secondary mb-1">
+        <i class="fas fa-times mr-1"></i>Clear
+      </a>
+    </form>
+  </div>
+</div>
+
+<div class="ehs-card">
+  <div class="card-body p-0">
+    {% if topics %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="thead-light">
+          <tr>
+            <th>Name</th>
+            <th>Code</th>
+            <th>Category</th>
+            <th>Validity</th>
+            <th>Passing Score</th>
+            <th>Mandatory</th>
+            <th>Sessions</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for topic in topics %}
+          <tr>
+            <td>
+              <strong>{{ topic.name }}</strong><br>
+              <small class="text-muted">{{ topic.description|truncatechars:60 }}</small>
+            </td>
+            <td><span class="badge badge-secondary">{{ topic.code }}</span></td>
+            <td>{{ topic.get_category_display }}</td>
+            <td>{{ topic.validity_period_days }} days</td>
+            <td>{{ topic.passing_score }}%</td>
+            <td>
+              {% if topic.is_mandatory %}
+                <span class="badge badge-danger"><i class="fas fa-exclamation-circle mr-1"></i>Yes</span>
+              {% else %}
+                <span class="badge badge-light text-muted">No</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <span class="badge badge-primary">{{ topic.session_count }}</span>
+            </td>
+            <td>
+              {% if topic.is_active %}
+                <span class="badge badge-success">Active</span>
+              {% else %}
+                <span class="badge badge-secondary">Inactive</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if request.user.can_manage_training_topics or request.user.is_superuser %}
+              <a href="{% url 'training:topic_edit' topic.pk %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                <i class="fas fa-edit"></i>
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if is_paginated %}
+    <div class="card-footer">
+      <nav>
+        <ul class="pagination pagination-sm mb-0 justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&category={{ selected_category }}">
+                <i class="fas fa-chevron-left"></i>
+              </a>
+            </li>
+          {% endif %}
+          <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          </li>
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&category={{ selected_category }}">
+                <i class="fas fa-chevron-right"></i>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="fas fa-book fa-3x mb-2"></i>
+      <p>No training topics found.</p>
+      {% if request.user.can_manage_training_topics or request.user.is_superuser %}
+      <a href="{% url 'training:topic_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus mr-1"></i> Add First Topic
+      </a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

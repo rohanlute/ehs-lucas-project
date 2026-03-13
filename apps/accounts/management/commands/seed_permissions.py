@@ -120,6 +120,36 @@ class Command(BaseCommand):
              'ENV_DATA', 'MANAGE', 6),
             ('EXPORT_ENV_DATA', 'Export Env Data', 'Can export data', 
              'ENV_DATA', 'EXPORT', 7),
+             # === TRAINING MODULE ===
+            ('ACCESS_TRAINING_MODULE', 'Access Training Module', 'Can access training module',
+            'TRAINING', 'MODULE_ACCESS', 0),
+
+            ('CREATE_TRAINING_SESSION', 'Create Training Session', 'Can create training sessions',
+            'TRAINING', 'CREATE', 1),
+
+            ('EDIT_TRAINING_SESSION', 'Edit Training Session', 'Can edit training sessions',
+            'TRAINING', 'EDIT', 2),
+
+            ('VIEW_TRAINING_SESSION', 'View Training Session', 'Can view training sessions',
+            'TRAINING', 'VIEW', 3),
+
+            ('MARK_TRAINING_ATTENDANCE', 'Mark Training Attendance', 'Can mark attendance for sessions',
+            'TRAINING', 'MANAGE', 4),
+
+            ('UPLOAD_TRAINING_CERTIFICATE', 'Upload Training Certificate', 'Can upload certificates manually',
+            'TRAINING', 'MANAGE', 5),
+
+            ('VIEW_TRAINING_COMPLIANCE', 'View Training Compliance', 'Can view compliance matrix/reports',
+            'TRAINING', 'VIEW', 6),
+
+            ('MANAGE_TRAINING_TOPICS', 'Manage Training Topics', 'Can create/edit training topics master',
+            'TRAINING', 'MANAGE', 7),
+
+            ('MANAGE_TRAINING_REQUIREMENTS', 'Manage Training Requirements', 'Can define who needs what training',
+            'TRAINING', 'MANAGE', 8),
+
+            ('CLOSE_TRAINING_SESSION', 'Close Training Session', 'Can mark session as completed',
+            'TRAINING', 'CLOSE', 9),
         ]
 
         created = 0

@@ -1,0 +1,103 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Upload Certificate Manually{% endblock %}
+{% block page_title %}Upload Certificate Manually{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:dashboard' %}">Training</a></li>
+<li class="breadcrumb-item"><a href="{% url 'training:record_list' %}">Records</a></li>
+<li class="breadcrumb-item active">Upload Certificate</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 offset-md-2">
+    <div class="ehs-card">
+      <div class="card-header bg-primary text-white">
+        <h3 class="card-title mb-0">
+          <i class="fas fa-upload mr-2"></i>Upload External Training Certificate
+        </h3>
+      </div>
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card-body">
+
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle mr-2"></i>
+            Use this form to record training completed <strong>outside</strong> the EHS system
+            (e.g., external courses, government certifications, vendor training).
+          </div>
+
+          {% if form.errors %}
+          <div class="alert alert-danger alert-dismissible fade show">
+            <h6><i class="fas fa-exclamation-triangle mr-2"></i>Please fix the errors:</h6>
+            <ul class="mb-0">
+              {% for field in form %}
+                {% for error in field.errors %}
+                  <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                {% endfor %}
+              {% endfor %}
+            </ul>
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+          </div>
+          {% endif %}
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>Employee <span class="text-danger">*</span></label>
+              {{ form.employee }}
+            </div>
+            <div class="col-md-6 mb-3">
+              <label>Training Topic <span class="text-danger">*</span></label>
+              {{ form.topic }}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label>Completed Date <span class="text-danger">*</span></label>
+              {{ form.completed_date }}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label>Valid Until <span class="text-danger">*</span></label>
+              {{ form.valid_until }}
+              <small class="form-text text-muted">Certificate expiry date</small>
+            </div>
+            <div class="col-md-4 mb-3">
+              <label>External Certificate #</label>
+              {{ form.external_certificate_number }}
+              <small class="form-text text-muted">Certificate # from external body (optional)</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label>Remarks</label>
+              {{ form.remarks }}
+              <small class="form-text text-muted">e.g. Course name, training provider, location</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label>Attach Certificate (PDF/Image)</label>
+              {{ form.certificate_file }}
+            </div>
+          </div>
+
+        </div>
+        <div class="card-footer">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save mr-2"></i>Save Certificate
+          </button>
+          <a href="{% url 'training:record_list' %}" class="btn btn-secondary btn-lg ml-2">
+            <i class="fas fa-times mr-2"></i>Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
