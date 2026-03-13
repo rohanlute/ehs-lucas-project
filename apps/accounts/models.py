@@ -211,6 +211,37 @@ class User(AbstractUser):
         default=False,
         verbose_name="Can Close Training Session"
     )
+    # ============================================
+    # MEETING MODULE PERMISSIONS
+    # ============================================
+    can_access_meeting_module = models.BooleanField(
+        default=False,
+        verbose_name="Can Access Meeting Module"
+    )
+    can_create_meeting = models.BooleanField(
+        default=False,
+        verbose_name="Can Create Meeting"
+    )
+    can_edit_meeting = models.BooleanField(
+        default=False,
+        verbose_name="Can Edit Meeting"
+    )
+    can_record_mom = models.BooleanField(
+        default=False,
+        verbose_name="Can Record Minutes of Meeting"
+    )
+    can_close_meeting = models.BooleanField(
+        default=False,
+        verbose_name="Can Close/Complete Meeting"
+    )
+    can_manage_meeting_action_items = models.BooleanField(
+        default=False,
+        verbose_name="Can Manage Meeting Action Items"
+    )
+    can_mark_meeting_attendance = models.BooleanField(
+        default=False,
+        verbose_name="Can Mark Meeting Attendance"
+    )
     class Meta:
         ordering = ['first_name', 'last_name']
         verbose_name = 'User'
@@ -295,6 +326,15 @@ class User(AbstractUser):
             'MANAGE_TRAINING_TOPICS':        'can_manage_training_topics',
             'MANAGE_TRAINING_REQUIREMENTS':  'can_manage_training_requirements',
             'CLOSE_TRAINING_SESSION':        'can_close_training_session',
+
+            # Meeting Module
+            'ACCESS_MEETING_MODULE':          'can_access_meeting_module',
+            'CREATE_MEETING':                 'can_create_meeting',
+            'EDIT_MEETING':                   'can_edit_meeting',
+            'RECORD_MEETING_MOM':             'can_record_mom',
+            'CLOSE_MEETING':                  'can_close_meeting',
+            'MANAGE_MEETING_ACTION_ITEMS':    'can_manage_meeting_action_items',
+            'MARK_MEETING_ATTENDANCE':        'can_mark_meeting_attendance',
         }
         
         self._reset_all_permissions()
@@ -330,6 +370,13 @@ class User(AbstractUser):
         self.can_manage_training_topics = False
         self.can_manage_training_requirements = False
         self.can_close_training_session = False
+        self.can_access_meeting_module = False
+        self.can_create_meeting = False
+        self.can_edit_meeting = False
+        self.can_record_mom = False
+        self.can_close_meeting = False
+        self.can_manage_meeting_action_items = False
+        self.can_mark_meeting_attendance = False
 
     def has_permission(self, code):
         """Check if user has a specific permission by code"""

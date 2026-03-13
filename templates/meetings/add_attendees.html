@@ -1,0 +1,60 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Add Attendees — {{ meeting.meeting_number }}{% endblock %}
+{% block page_title %}Add Attendees{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:meeting_detail' meeting.pk %}">{{ meeting.meeting_number }}</a></li>
+<li class="breadcrumb-item active">Add Attendees</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-10 offset-md-1">
+    <div class="ehs-card">
+      <div class="card-header bg-primary text-white">
+        <h4 class="card-title mb-0">
+          <i class="fas fa-user-plus mr-2"></i>Add Attendees — {{ meeting.meeting_number }}
+        </h4>
+      </div>
+      <div class="card-body">
+
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle mr-2"></i>
+          <strong>{{ meeting.title }}</strong> — {{ meeting.scheduled_date|date:"d M Y" }} at {{ meeting.scheduled_time|time:"H:i" }}<br>
+          Select employees to invite. They will be notified automatically.
+        </div>
+
+        <form method="POST">
+          {% csrf_token %}
+          {% if form.errors %}
+          <div class="alert alert-danger">
+            {{ form.employees.errors }}
+          </div>
+          {% endif %}
+
+          <div class="form-group">
+            <label><strong>Select Employees to Invite</strong></label>
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 4px; padding: 12px;">
+              {{ form.employees }}
+            </div>
+            <small class="form-text text-muted">Hold Ctrl/Cmd to multi-select. Already added attendees are excluded.</small>
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mt-3">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-user-plus mr-1"></i> Add Selected & Notify
+            </button>
+            <a href="{% url 'meetings:meeting_detail' meeting.pk %}" class="btn btn-secondary">
+              <i class="fas fa-times mr-1"></i> Cancel
+            </a>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

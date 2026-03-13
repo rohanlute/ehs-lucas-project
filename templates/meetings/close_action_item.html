@@ -1,0 +1,72 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Close Action Item{% endblock %}
+{% block page_title %}Close Action Item{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:meeting_detail' action.meeting.pk %}">{{ action.meeting.meeting_number }}</a></li>
+<li class="breadcrumb-item active">Close Action</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-6 offset-md-3">
+    <div class="ehs-card">
+      <div class="card-header bg-success text-white">
+        <h4 class="card-title mb-0">
+          <i class="fas fa-check-circle mr-2"></i>Close Action Item
+        </h4>
+      </div>
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card-body">
+
+          <div class="alert alert-secondary py-2">
+            <strong>Action:</strong> {{ action.description }}<br>
+            <small class="text-muted">
+              Meeting: {{ action.meeting.meeting_number }} |
+              Due: {{ action.due_date|date:"d M Y" }} |
+              Assigned to: {{ action.assigned_to.get_full_name }}
+              {% if action.is_overdue %}
+                <span class="badge badge-danger ml-1">{{ action.days_overdue }}d overdue</span>
+              {% endif %}
+            </small>
+          </div>
+
+          {% if form.errors %}
+          <div class="alert alert-danger">
+            {% for field in form %}{% for error in field.errors %}
+              <div>{{ field.label }}: {{ error }}</div>
+            {% endfor %}{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="form-group">
+            <label for="id_closure_remarks">Closure Remarks <span class="text-danger">*</span></label>
+            {{ form.closure_remarks }}
+            {% if form.closure_remarks.errors %}<div class="text-danger small">{{ form.closure_remarks.errors }}</div>{% endif %}
+            <small class="form-text text-muted">Describe the action taken and outcome</small>
+          </div>
+
+          <div class="form-group">
+            <label for="id_closure_attachment">Supporting Document (Optional)</label>
+            {{ form.closure_attachment }}
+            <small class="form-text text-muted">Upload evidence, photos, or report</small>
+          </div>
+
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+          <button type="submit" class="btn btn-success">
+            <i class="fas fa-check-circle mr-1"></i> Close Action
+          </button>
+          <a href="{% url 'meetings:meeting_detail' action.meeting.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-1"></i> Back
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

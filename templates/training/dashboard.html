@@ -1,0 +1,652 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Training Management Dashboard{% endblock %}
+{% block page_title %}Training Management Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Training Management</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stat-card { border-radius: 8px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-number { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .stat-label  { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; }
+  .stat-icon   { font-size: 2rem; opacity: 0.7; }
+  .chart-card  { border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .expiry-warn { background-color: #fff9e6; }
+  .expiry-crit { background-color: #fff5f5; }
+  .rate-badge  { font-size: 1.4rem; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Quick Actions -->
+<div class="row mb-3">
+  <div class="col-12 d-flex flex-wrap gap-2">
+    {% if request.user.can_create_training_session or request.user.is_superuser %}
+    <a href="{% url 'training:session_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus mr-1"></i> Schedule Session
+    </a>
+    {% endif %}
+    <a href="{% url 'training:session_list' %}" class="btn btn-outline-secondary">
+      <i class="fas fa-list mr-1"></i> All Sessions
+    </a>
+    <a href="{% url 'training:record_list' %}" class="btn btn-outline-info">
+      <i class="fas fa-certificate mr-1"></i> Certificates
+    </a>
+    <a href="{% url 'training:compliance' %}" class="btn btn-outline-success">
+      <i class="fas fa-clipboard-check mr-1"></i> Compliance
+    </a>
+    <a href="{% url 'training:my_trainings' %}" class="btn btn-outline-warning">
+      <i class="fas fa-user-graduate mr-1"></i> My Trainings
+    </a>
+    <a href="{% url 'training:notifications' %}" class="btn btn-outline-dark">
+      <i class="fas fa-bell mr-1"></i> Notifications
+      {% if unread_count > 0 %}<span class="badge badge-danger">{{ unread_count }}</span>{% endif %}
+    </a>
+  </div>
+</div>
+
+<!-- ══ Row 1: Stat Cards ══ -->
+<div class="row mb-3">
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-primary text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ total_sessions }}</div>
+          <div class="stat-label">Total Sessions</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-chalkboard-teacher"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{% url 'training:session_list' %}" class="text-white-50 small">View all →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-warning text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ scheduled_sessions }}</div>
+          <div class="stat-label">Scheduled</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <small class="text-white-50">
+          {% if overdue_sessions > 0 %}
+            <i class="fas fa-exclamation-triangle"></i> {{ overdue_sessions }} overdue
+          {% else %}
+            This month: {{ this_month_sessions }}
+          {% endif %}
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-success text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ completed_sessions }}</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{% url 'training:session_list' %}?status=COMPLETED" class="text-white-50 small">View →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-info text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ active_certs }}</div>
+          <div class="stat-label">Active Certs</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-certificate"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <small class="text-white-50">{{ expired_certs }} expired</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-danger text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ expiring_soon }}</div>
+          <div class="stat-label">Expiring (30d)</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{% url 'training:record_list' %}?expiry=30" class="text-white-50 small">View →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card h-100" style="border-left: 4px solid #6f42c1;">
+      <div class="card-body text-center">
+        <div class="rate-badge text-{% if overall_pass_rate >= 75 %}success{% elif overall_pass_rate >= 50 %}warning{% else %}danger{% endif %}">
+          {{ overall_pass_rate }}%
+        </div>
+        <div class="stat-label text-muted mt-1">Overall Pass Rate</div>
+        <small class="text-muted">Assessed sessions</small>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Row 2: Monthly Trend + Category ══ -->
+<div class="row mb-3">
+
+  <div class="col-md-8 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-line mr-2 text-primary"></i>
+          Monthly Session Trend (Last 6 Months)
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="monthlyTrendChart" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-pie mr-2 text-info"></i>
+          Sessions by Category
+        </h5>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="categoryChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Row 3: Attendance + Mode + Certs ══ -->
+<div class="row mb-3">
+
+  <div class="col-md-5 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-user-check mr-2 text-success"></i>
+          Attendance Rate — Last 10 Completed
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="attendanceChart" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-laptop mr-2 text-warning"></i>
+          Sessions by Training Mode
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="modeChart" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-3 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-certificate mr-2 text-info"></i>
+          Certificate Status
+        </h5>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="certChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Row 4: Top Topics + Pass Rate ══ -->
+<div class="row mb-3">
+
+  <div class="col-md-6 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-book mr-2 text-secondary"></i>
+          Top Topics by Session Count
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="topicChart" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-percentage mr-2 text-danger"></i>
+          Pass Rate by Topic <small class="text-muted">(Last 90 Days)</small>
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="passrateChart" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Row 5: Upcoming + Overdue ══ -->
+<div class="row mb-3">
+
+  <!-- Upcoming Sessions -->
+  <div class="col-md-6 mb-3">
+    <div class="ehs-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-calendar-alt mr-2 text-primary"></i>
+          Upcoming Sessions <small class="text-muted">(Next 30 Days)</small>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if upcoming_sessions %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr><th>Session</th><th>Topic</th><th>Date</th><th>Mode</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for s in upcoming_sessions %}
+              <tr>
+                <td>
+                  <strong><a href="{% url 'training:session_detail' s.pk %}">{{ s.session_number }}</a></strong>
+                </td>
+                <td>{{ s.topic.name|truncatechars:25 }}</td>
+                <td>
+                  {{ s.scheduled_date|date:"d M Y" }}<br>
+                  <small class="text-muted">{{ s.scheduled_time|time:"H:i" }}</small>
+                </td>
+                <td><span class="badge badge-info" style="font-size:.7rem;">{{ s.get_training_mode_display }}</span></td>
+                <td>
+                  <a href="{% url 'training:session_detail' s.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-calendar-times fa-2x mb-2"></i>
+          <p>No upcoming sessions in next 30 days</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer text-right">
+        <a href="{% url 'training:session_list' %}?status=SCHEDULED" class="btn btn-sm btn-outline-primary">
+          View All Scheduled →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Expiring Certificates -->
+  <div class="col-md-6 mb-3">
+    <div class="ehs-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-hourglass-half mr-2 text-warning"></i>
+          Certificates Expiring in 30 Days
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if expiring_records %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr><th>Employee</th><th>Topic</th><th>Expires</th><th>Days Left</th></tr>
+            </thead>
+            <tbody>
+              {% for rec in expiring_records %}
+              <tr class="{% if rec.days_until_expiry <= 7 %}expiry-crit{% else %}expiry-warn{% endif %}">
+                <td>
+                  <strong>{{ rec.employee.get_full_name }}</strong><br>
+                  <small class="text-muted">{{ rec.employee.employee_id|default:"—" }}</small>
+                </td>
+                <td>{{ rec.topic.name|truncatechars:25 }}</td>
+                <td>{{ rec.valid_until|date:"d M Y" }}</td>
+                <td>
+                  <span class="badge badge-{% if rec.days_until_expiry <= 7 %}danger{% else %}warning{% endif %}">
+                    {{ rec.days_until_expiry }}d
+                  </span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-clipboard-check fa-2x mb-2 text-success"></i>
+          <p>No certificates expiring in 30 days</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer text-right">
+        <a href="{% url 'training:record_list' %}?expiry=30" class="btn btn-sm btn-outline-warning">
+          View All Expiring →
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Overdue Sessions Alert ══ -->
+{% if overdue_session_list %}
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="ehs-card border-danger">
+      <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          Overdue Sessions — Scheduled Date Passed
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr><th>Session #</th><th>Topic</th><th>Scheduled Date</th><th>Plant</th><th>Mode</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for s in overdue_session_list %}
+              <tr class="table-danger">
+                <td><a href="{% url 'training:session_detail' s.pk %}"><strong>{{ s.session_number }}</strong></a></td>
+                <td>{{ s.topic.name }}</td>
+                <td>{{ s.scheduled_date|date:"d M Y" }}</td>
+                <td>{{ s.plant.name }}</td>
+                <td>{{ s.get_training_mode_display }}</td>
+                <td>
+                  <a href="{% url 'training:session_detail' s.pk %}" class="btn btn-sm btn-danger">
+                    <i class="fas fa-eye mr-1"></i>View
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ Recent Completed ══ -->
+<div class="row">
+  <div class="col-12 mb-3">
+    <div class="ehs-card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-history mr-2 text-success"></i>
+          Recently Completed Sessions
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if recent_sessions %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr><th>Session #</th><th>Topic</th><th>Mode</th><th>Plant</th><th>Attendance</th><th>Date</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for s in recent_sessions %}
+              <tr>
+                <td><a href="{% url 'training:session_detail' s.pk %}"><strong>{{ s.session_number }}</strong></a></td>
+                <td>{{ s.topic.name|truncatechars:30 }}</td>
+                <td><span class="badge badge-secondary" style="font-size:.7rem;">{{ s.get_training_mode_display }}</span></td>
+                <td>{{ s.plant.name }}</td>
+                <td>
+                  <span class="badge badge-{% if s.attendance_percentage >= 75 %}success{% elif s.attendance_percentage >= 50 %}warning{% else %}danger{% endif %}">
+                    {{ s.total_present }}/{{ s.total_invited }} ({{ s.attendance_percentage }}%)
+                  </span>
+                </td>
+                <td>{{ s.actual_date|date:"d M Y" }}</td>
+                <td>
+                  <a href="{% url 'training:session_detail' s.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-inbox fa-2x mb-2"></i><p>No completed sessions yet</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer text-right">
+        <a href="{% url 'training:session_list' %}?status=COMPLETED" class="btn btn-sm btn-outline-success">
+          View All Completed →
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+Chart.defaults.font.family = "'Source Sans Pro', sans-serif";
+Chart.defaults.font.size   = 12;
+
+const C = {
+  blue:   '#007bff', green:  '#28a745', orange: '#fd7e14',
+  red:    '#dc3545', teal:   '#20c997', purple: '#6f42c1',
+  yellow: '#ffc107', gray:   '#6c757d', indigo: '#6610f2',
+  pink:   '#e83e8c', cyan:   '#17a2b8',
+};
+const PALETTE = Object.values(C);
+
+// 1. Monthly Trend (Line)
+new Chart(document.getElementById('monthlyTrendChart'), {
+  type: 'line',
+  data: {
+    labels: {{ monthly_labels|safe }},
+    datasets: [
+      {
+        label: 'Total Scheduled',
+        data: {{ monthly_totals|safe }},
+        borderColor: C.blue,
+        backgroundColor: 'rgba(0,123,255,0.08)',
+        fill: true, tension: 0.4, pointRadius: 4,
+      },
+      {
+        label: 'Completed',
+        data: {{ monthly_completed|safe }},
+        borderColor: C.green,
+        backgroundColor: 'rgba(40,167,69,0.08)',
+        fill: true, tension: 0.4, pointRadius: 4,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+  },
+});
+
+// 2. Category (Doughnut)
+new Chart(document.getElementById('categoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ category_labels|safe }},
+    datasets: [{
+      data: {{ category_counts|safe }},
+      backgroundColor: PALETTE,
+      borderWidth: 2, borderColor: '#fff',
+    }],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8 } } },
+    cutout: '60%',
+  },
+});
+
+// 3. Attendance Rate (Bar)
+const attRates = {{ att_rates|safe }};
+new Chart(document.getElementById('attendanceChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ att_labels|safe }},
+    datasets: [{
+      label: 'Attendance %',
+      data: attRates,
+      backgroundColor: attRates.map(v =>
+        v >= 75 ? 'rgba(40,167,69,0.75)' :
+        v >= 50 ? 'rgba(255,193,7,0.75)' :
+                  'rgba(220,53,69,0.75)'
+      ),
+      borderRadius: 4,
+    }],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+      x: { ticks: { maxRotation: 45 } },
+    },
+  },
+});
+
+// 4. Training Mode (Bar)
+new Chart(document.getElementById('modeChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ mode_labels|safe }},
+    datasets: [{
+      label: 'Sessions',
+      data: {{ mode_counts|safe }},
+      backgroundColor: PALETTE.slice(0, {{ mode_counts|length }}),
+      borderRadius: 4,
+    }],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+  },
+});
+
+// 5. Certificate Status (Doughnut)
+new Chart(document.getElementById('certChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ cert_labels|safe }},
+    datasets: [{
+      data: {{ cert_counts|safe }},
+      backgroundColor: [C.green, C.yellow, C.red],
+      borderWidth: 2, borderColor: '#fff',
+    }],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+    cutout: '55%',
+  },
+});
+
+// 6. Top Topics (Horizontal Bar)
+new Chart(document.getElementById('topicChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ topic_labels|safe }},
+    datasets: [
+      {
+        label: 'Total',
+        data: {{ topic_totals|safe }},
+        backgroundColor: 'rgba(0,123,255,0.65)',
+        borderRadius: 4,
+      },
+      {
+        label: 'Completed',
+        data: {{ topic_completed|safe }},
+        backgroundColor: 'rgba(40,167,69,0.65)',
+        borderRadius: 4,
+      },
+    ],
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+    scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
+  },
+});
+
+// 7. Pass Rate by Topic (Bar)
+const prValues = {{ passrate_values|safe }};
+new Chart(document.getElementById('passrateChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ passrate_labels|safe }},
+    datasets: [{
+      label: 'Pass Rate %',
+      data: prValues,
+      backgroundColor: prValues.map(v =>
+        v >= 75 ? 'rgba(40,167,69,0.75)' :
+        v >= 50 ? 'rgba(255,193,7,0.75)' :
+                  'rgba(220,53,69,0.75)'
+      ),
+      borderRadius: 4,
+    }],
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+    },
+  },
+});
+</script>
+{% endblock %}

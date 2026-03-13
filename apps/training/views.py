@@ -183,72 +183,241 @@ class TrainingSessionDashboardView(TrainingAccessMixin, TemplateView):
     """
     template_name = 'training/dashboard.html'
 
+    # ============================================================
+# REPLACE get_context_data inside TrainingSessionDashboardView
+# Also ensure these imports exist at top of training_views.py:
+#   from django.db.models.functions import TruncMonth
+#   import json  (already present)
+# ============================================================
+
     def get_context_data(self, **kwargs):
+        from django.db.models.functions import TruncMonth
+
         context = super().get_context_data(**kwargs)
-        user = self.request.user
+        user  = self.request.user
         today = timezone.now().date()
 
-        # Role-based session queryset — same pattern as IncidentDashboardView
+        # ── Role-based base querysets (unchanged from original) ──
         if user.is_superuser or (
             hasattr(user, 'role') and user.role and user.role.name == 'ADMIN'
         ):
-            sessions = TrainingSession.objects.all()
-            records = TrainingRecord.objects.all()
+            sessions     = TrainingSession.objects.all()
+            records      = TrainingRecord.objects.all()
+            participants = TrainingParticipant.objects.all()
         elif user.plant:
-            sessions = TrainingSession.objects.filter(plant=user.plant)
-            records = TrainingRecord.objects.filter(employee__plant=user.plant)
+            sessions     = TrainingSession.objects.filter(plant=user.plant)
+            records      = TrainingRecord.objects.filter(employee__plant=user.plant)
+            participants = TrainingParticipant.objects.filter(session__plant=user.plant)
         else:
-            sessions = TrainingSession.objects.filter(participants__employee=user)
-            records = TrainingRecord.objects.filter(employee=user)
+            sessions     = TrainingSession.objects.filter(participants__employee=user)
+            records      = TrainingRecord.objects.filter(employee=user)
+            participants = TrainingParticipant.objects.filter(employee=user)
 
-        # Stats
-        context['total_sessions'] = sessions.count()
-        context['scheduled_sessions'] = sessions.filter(status='SCHEDULED').count()
-        context['completed_sessions'] = sessions.filter(status='COMPLETED').count()
-        context['cancelled_sessions'] = sessions.filter(status='CANCELLED').count()
+        # ════════════════════════════
+        # STAT CARDS
+        # ════════════════════════════
+        total_sessions     = sessions.count()
+        scheduled_sessions = sessions.filter(status='SCHEDULED').count()
+        completed_sessions = sessions.filter(status='COMPLETED').count()
+        cancelled_sessions = sessions.filter(status='CANCELLED').count()
+        ongoing_sessions   = sessions.filter(status='ONGOING').count()
 
-        # This month
-        context['this_month_sessions'] = sessions.filter(
+        overdue_sessions = sessions.filter(
+            status='SCHEDULED', scheduled_date__lt=today
+        ).count()
+
+        this_month_sessions = sessions.filter(
             scheduled_date__month=today.month,
             scheduled_date__year=today.year
         ).count()
 
-        # Overdue sessions (scheduled date passed but still SCHEDULED)
-        context['overdue_sessions'] = sessions.filter(
-            status='SCHEDULED',
-            scheduled_date__lt=today
-        ).count()
-
         # Certificate stats
-        context['active_certificates'] = records.filter(status='ACTIVE').count()
-        context['expiring_soon'] = records.filter(
+        active_certs   = records.filter(status='ACTIVE').count()
+        expiring_soon  = records.filter(
             status='ACTIVE',
             valid_until__lte=today + datetime.timedelta(days=30),
             valid_until__gte=today
         ).count()
-        context['expired_certificates'] = records.filter(
-            valid_until__lt=today
-        ).count()
+        expired_certs  = records.filter(valid_until__lt=today).count()
 
-        # Upcoming sessions (next 7 days)
-        context['upcoming_sessions'] = sessions.filter(
+        # Overall pass rate
+        total_assessed = participants.filter(
+            attendance_status='PRESENT',
+            session__topic__passing_score__gt=0
+        ).count()
+        total_passed = participants.filter(
+            attendance_status='PRESENT',
+            session__topic__passing_score__gt=0,
+            passed=True
+        ).count()
+        overall_pass_rate = round((total_passed / total_assessed * 100), 1) if total_assessed else 0
+
+        # ════════════════════════════
+        # LISTS
+        # ════════════════════════════
+        upcoming_sessions = sessions.filter(
             status='SCHEDULED',
             scheduled_date__gte=today,
-            scheduled_date__lte=today + datetime.timedelta(days=7)
+            scheduled_date__lte=today + datetime.timedelta(days=30)
         ).select_related('topic', 'plant', 'location').order_by('scheduled_date')[:5]
 
-        # Recent completed sessions
-        context['recent_sessions'] = sessions.filter(
+        recent_sessions = sessions.filter(
             status='COMPLETED'
         ).select_related('topic', 'plant').order_by('-actual_date')[:5]
 
-        # Expiring certificates
-        context['expiring_records'] = records.filter(
+        expiring_records = records.filter(
             status='ACTIVE',
             valid_until__lte=today + datetime.timedelta(days=30),
             valid_until__gte=today
         ).select_related('employee', 'topic').order_by('valid_until')[:10]
 
+        overdue_session_list = sessions.filter(
+            status='SCHEDULED',
+            scheduled_date__lt=today
+        ).select_related('topic', 'plant').order_by('scheduled_date')[:5]
+
+        unread_count = TrainingNotification.objects.filter(
+            recipient=user, is_read=False
+        ).count()
+
+        # ════════════════════════════
+        # CHART DATA
+        # ════════════════════════════
+
+        # 1. Monthly Trend — last 6 months (Line)
+        six_months_ago = (today.replace(day=1) - datetime.timedelta(days=150))
+        monthly_data = (
+            sessions
+            .filter(scheduled_date__gte=six_months_ago)
+            .annotate(month=TruncMonth('scheduled_date'))
+            .values('month')
+            .annotate(
+                total=Count('id'),
+                completed=Count('id', filter=Q(status='COMPLETED')),
+            )
+            .order_by('month')
+        )
+        monthly_labels    = [d['month'].strftime('%b %Y') for d in monthly_data]
+        monthly_totals    = [d['total'] for d in monthly_data]
+        monthly_completed = [d['completed'] for d in monthly_data]
+
+        # 2. Sessions by Category (Doughnut)
+        category_data = (
+            sessions
+            .values('topic__category')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        category_map    = dict(TrainingTopic.CATEGORY_CHOICES)
+        category_labels = [
+            category_map.get(d['topic__category'], d['topic__category'] or 'Unknown')
+            for d in category_data
+        ]
+        category_counts = [d['count'] for d in category_data]
+
+        # 3. Sessions by Training Mode (Bar)
+        mode_data = (
+            sessions
+            .values('training_mode')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+        mode_map    = dict(TrainingSession.TRAINING_MODE_CHOICES)
+        mode_labels = [mode_map.get(d['training_mode'], d['training_mode']) for d in mode_data]
+        mode_counts = [d['count'] for d in mode_data]
+
+        # 4. Attendance Rate — last 10 completed sessions (Bar)
+        last_10_sessions  = list(sessions.filter(status='COMPLETED').order_by('-actual_date')[:10])
+        att_labels = [s.session_number for s in last_10_sessions]
+        att_rates  = [s.attendance_percentage for s in last_10_sessions]
+
+        # 5. Certificate Status (Doughnut)
+        cert_labels = ['Active', 'Expiring (30d)', 'Expired']
+        cert_counts = [
+            max(active_certs - expiring_soon, 0),
+            expiring_soon,
+            expired_certs,
+        ]
+
+        # 6. Top 8 Topics by session count (Horizontal Bar)
+        topic_data = (
+            sessions
+            .values('topic__name')
+            .annotate(
+                total=Count('id'),
+                completed=Count('id', filter=Q(status='COMPLETED')),
+            )
+            .order_by('-total')[:8]
+        )
+        topic_labels    = [d['topic__name'] for d in topic_data]
+        topic_totals    = [d['total'] for d in topic_data]
+        topic_completed = [d['completed'] for d in topic_data]
+
+        # 7. Pass Rate per Topic — last 90 days (Bar)
+        ninety_days_ago = today - datetime.timedelta(days=90)
+        pass_rate_data = (
+            participants
+            .filter(
+                session__status='COMPLETED',
+                session__actual_date__gte=ninety_days_ago,
+                attendance_status='PRESENT',
+                session__topic__passing_score__gt=0,
+            )
+            .values('session__topic__name')
+            .annotate(
+                total=Count('id'),
+                passed=Count('id', filter=Q(passed=True)),
+            )
+            .order_by('-total')[:8]
+        )
+        passrate_labels = [d['session__topic__name'] for d in pass_rate_data]
+        passrate_values = [
+            round(d['passed'] / d['total'] * 100, 1) if d['total'] else 0
+            for d in pass_rate_data
+        ]
+
+        # ── Assign to context ──
+        context.update({
+            # Stat cards
+            'total_sessions':       total_sessions,
+            'scheduled_sessions':   scheduled_sessions,
+            'completed_sessions':   completed_sessions,
+            'cancelled_sessions':   cancelled_sessions,
+            'ongoing_sessions':     ongoing_sessions,
+            'overdue_sessions':     overdue_sessions,
+            'this_month_sessions':  this_month_sessions,
+            'active_certs':         active_certs,
+            'expiring_soon':        expiring_soon,
+            'expired_certs':        expired_certs,
+            'overall_pass_rate':    overall_pass_rate,
+
+            # Lists
+            'upcoming_sessions':    upcoming_sessions,
+            'recent_sessions':      recent_sessions,
+            'expiring_records':     expiring_records,
+            'overdue_session_list': overdue_session_list,
+            'unread_count':         unread_count,
+
+            # Chart JSON
+            'monthly_labels':       json.dumps(monthly_labels),
+            'monthly_totals':       json.dumps(monthly_totals),
+            'monthly_completed':    json.dumps(monthly_completed),
+            'category_labels':      json.dumps(category_labels),
+            'category_counts':      json.dumps(category_counts),
+            'mode_labels':          json.dumps(mode_labels),
+            'mode_counts':          json.dumps(mode_counts),
+            'att_labels':           json.dumps(att_labels),
+            'att_rates':            json.dumps(att_rates),
+            'cert_labels':          json.dumps(cert_labels),
+            'cert_counts':          json.dumps(cert_counts),
+            'topic_labels':         json.dumps(topic_labels),
+            'topic_totals':         json.dumps(topic_totals),
+            'topic_completed':      json.dumps(topic_completed),
+            'passrate_labels':      json.dumps(passrate_labels),
+            'passrate_values':      json.dumps(passrate_values),
+
+            'page_title': 'Training Management Dashboard',
+        })
         return context
 
 

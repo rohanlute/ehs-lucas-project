@@ -1,0 +1,100 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Add Action Item — {{ meeting.meeting_number }}{% endblock %}
+{% block page_title %}Add Action Item{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:meeting_detail' meeting.pk %}">{{ meeting.meeting_number }}</a></li>
+<li class="breadcrumb-item active">Add Action Item</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .section-divider {
+    border-left: 4px solid #ffc107;
+    padding-left: 12px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #343a40;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-8 offset-md-2">
+    <div class="ehs-card">
+      <div class="card-header bg-warning text-dark">
+        <h3 class="card-title mb-0">
+          <i class="fas fa-tasks mr-2"></i>Add Action Item — {{ meeting.meeting_number }}
+        </h3>
+      </div>
+
+      <form method="POST" id="actionForm">
+        {% csrf_token %}
+
+        <div class="card-body">
+
+          <div class="alert alert-warning py-2">
+            <small><strong>{{ meeting.title }}</strong> — {{ meeting.scheduled_date|date:"d M Y" }}</small>
+          </div>
+
+          {% if form.errors %}
+          <div class="alert alert-danger alert-dismissible fade show">
+            <ul class="mb-0">
+              {% for field in form %}{% for error in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+              {% endfor %}{% endfor %}
+            </ul>
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+          </div>
+          {% endif %}
+
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label for="id_description">Action Description <span class="text-danger">*</span></label>
+              {{ form.description }}
+              {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-5 mb-3">
+              <label for="id_assigned_to">Assign To <span class="text-danger">*</span></label>
+              {{ form.assigned_to }}
+              {% if form.assigned_to.errors %}<div class="text-danger small">{{ form.assigned_to.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="id_due_date">Due Date <span class="text-danger">*</span></label>
+              {{ form.due_date }}
+              {% if form.due_date.errors %}<div class="text-danger small">{{ form.due_date.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-3 mb-3">
+              <label for="id_priority">Priority</label>
+              {{ form.priority }}
+            </div>
+          </div>
+
+          <div class="alert alert-info py-2">
+            <i class="fas fa-info-circle mr-1"></i>
+            Assigned person will be notified. You can escalate to a Hazard Report later if needed.
+          </div>
+
+        </div>
+
+        <div class="card-footer">
+          <button type="submit" class="btn btn-warning btn-lg" id="submitBtn">
+            <i class="fas fa-plus mr-2"></i>Add Action Item
+          </button>
+          <a href="{% url 'meetings:meeting_detail' meeting.pk %}" class="btn btn-secondary btn-lg ml-2">
+            <i class="fas fa-times mr-2"></i>Cancel
+          </a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

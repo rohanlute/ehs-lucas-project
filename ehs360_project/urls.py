@@ -33,6 +33,7 @@ urlpatterns = [
     path('notifications/', include('apps.notifications.urls')),
     path('environmental_mis/', include('apps.environmental_mis.urls')),
     path('training/',     include('apps.training.urls')),
+    path('meetings/', include('apps.meetings.urls')),
 
 
 

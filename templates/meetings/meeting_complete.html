@@ -1,0 +1,143 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Complete Meeting — {{ meeting.meeting_number }}{% endblock %}
+{% block page_title %}Complete Meeting & Record MOM{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:meeting_detail' meeting.pk %}">{{ meeting.meeting_number }}</a></li>
+<li class="breadcrumb-item active">Complete Meeting</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .section-divider {
+    border-left: 4px solid #28a745;
+    padding-left: 12px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #343a40;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-10 offset-md-1">
+    <div class="ehs-card">
+      <div class="card-header bg-success text-white">
+        <h3 class="card-title mb-0">
+          <i class="fas fa-check-circle mr-2"></i>Complete Meeting — {{ meeting.meeting_number }}
+        </h3>
+      </div>
+
+      <form method="POST" id="completeForm" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="card-body">
+
+          <div class="alert alert-success">
+            <strong>{{ meeting.title }}</strong><br>
+            <small>Attendance: {{ meeting.total_present }}/{{ meeting.total_invited }} present ({{ meeting.attendance_percentage }}%)</small>
+          </div>
+
+          {% if form.errors %}
+          <div class="alert alert-danger alert-dismissible fade show">
+            <h6><i class="fas fa-exclamation-triangle mr-2"></i>Please fix the errors below:</h6>
+            <ul class="mb-0">
+              {% for field in form %}{% for error in field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+              {% endfor %}{% endfor %}
+            </ul>
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+          </div>
+          {% endif %}
+
+          <!-- Actual Date/Time -->
+          <h5 class="section-divider"><i class="fas fa-calendar-check mr-2"></i>Actual Meeting Date & Time</h5>
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label for="id_actual_date">Actual Date <span class="text-danger">*</span></label>
+              {{ form.actual_date }}
+              {% if form.actual_date.errors %}<div class="text-danger small">{{ form.actual_date.errors }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="id_actual_start_time">Actual Start Time</label>
+              {{ form.actual_start_time }}
+            </div>
+            <div class="col-md-4 mb-3">
+              <label for="id_actual_end_time">Actual End Time</label>
+              {{ form.actual_end_time }}
+            </div>
+          </div>
+
+          <!-- Minutes of Meeting -->
+          <hr>
+          <h5 class="section-divider"><i class="fas fa-file-alt mr-2"></i>Minutes of Meeting (MOM)</h5>
+          <div class="row">
+            <div class="col-md-12 mb-3">
+              <label for="id_minutes_of_meeting">Meeting Minutes <span class="text-danger">*</span></label>
+              {{ form.minutes_of_meeting }}
+              <small class="form-text text-muted">
+                Summarize discussions, key points, and decisions. Action items can be added separately.
+              </small>
+              {% if form.minutes_of_meeting.errors %}
+                <div class="text-danger small">{{ form.minutes_of_meeting.errors }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="id_mom_attachment">Signed MOM Document (Optional)</label>
+              {{ form.mom_attachment }}
+              <small class="form-text text-muted">Upload signed physical MOM if available</small>
+            </div>
+          </div>
+
+          <!-- Summary info box -->
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle mr-2"></i>
+            After completing, you can publish the MOM to notify all attendees from the meeting detail page.
+            Action items can also be added post-completion.
+          </div>
+
+        </div>
+
+        <div class="card-footer">
+          <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+            <i class="fas fa-check-circle mr-2"></i>Mark as Completed
+          </button>
+          <a href="{% url 'meetings:meeting_detail' meeting.pk %}" class="btn btn-secondary btn-lg ml-2">
+            <i class="fas fa-times mr-2"></i>Cancel
+          </a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Default actual date to scheduled date
+    const actualDate = document.getElementById('id_actual_date');
+    if (actualDate && !actualDate.value) {
+        actualDate.value = '{{ meeting.scheduled_date|date:"Y-m-d" }}';
+    }
+
+    let isSubmitting = false;
+    document.getElementById('completeForm').addEventListener('submit', function(e) {
+        if (isSubmitting) { e.preventDefault(); return false; }
+        isSubmitting = true;
+        const btn = document.getElementById('submitBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Completing...';
+        }
+    });
+});
+</script>
+{% endblock %}

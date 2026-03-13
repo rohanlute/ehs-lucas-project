@@ -1,0 +1,176 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Meeting Notifications{% endblock %}
+{% block page_title %}Meeting Notifications{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item active">Notifications</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+  <div class="col-12 d-flex justify-content-between align-items-center">
+    <h5 class="mb-0">
+      Meeting Notifications
+      {% if unread_count > 0 %}
+        <span class="badge badge-danger">{{ unread_count }} Unread</span>
+      {% endif %}
+    </h5>
+    {% if unread_count > 0 %}
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="markAllReadBtn">
+      <i class="fas fa-check-double mr-1"></i> Mark All Read
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="ehs-card">
+  <div class="card-body p-0">
+    {% if notifications %}
+    <div class="list-group list-group-flush">
+      {% for notification in notifications %}
+      <div class="list-group-item list-group-item-action {% if not notification.is_read %}list-group-item-light{% endif %}"
+           id="notif-{{ notification.pk }}">
+        <div class="d-flex justify-content-between align-items-start">
+          <div class="flex-grow-1 mr-3">
+            <div class="d-flex align-items-center mb-1">
+              <!-- Icon by type -->
+              {% if 'CANCELLED' in notification.notification_type %}
+                <i class="fas fa-ban text-danger mr-2"></i>
+              {% elif 'ACTION' in notification.notification_type %}
+                <i class="fas fa-tasks text-warning mr-2"></i>
+              {% elif 'MOM' in notification.notification_type %}
+                <i class="fas fa-file-alt text-success mr-2"></i>
+              {% elif 'ESCALATED' in notification.notification_type %}
+                <i class="fas fa-exclamation-triangle text-danger mr-2"></i>
+              {% else %}
+                <i class="fas fa-bell text-primary mr-2"></i>
+              {% endif %}
+              <strong>{{ notification.title }}</strong>
+              {% if not notification.is_read %}
+                <span class="badge badge-primary ml-2" style="font-size:0.65rem;">NEW</span>
+              {% endif %}
+            </div>
+            <p class="mb-1 text-muted small">{{ notification.message }}</p>
+            {% if notification.meeting %}
+            <a href="{% url 'meetings:meeting_detail' notification.meeting.pk %}" class="btn btn-xs btn-outline-primary" style="padding:2px 8px;font-size:0.75rem;">
+              <i class="fas fa-eye mr-1"></i> View Meeting
+            </a>
+            {% endif %}
+          </div>
+          <div class="text-right" style="min-width:120px;">
+            <small class="text-muted d-block">{{ notification.created_at|date:"d M Y H:i" }}</small>
+            {% if not notification.is_read %}
+            <button type="button" class="btn btn-xs btn-outline-secondary mt-1 mark-read-btn"
+                    data-id="{{ notification.pk }}"
+                    style="padding:2px 8px;font-size:0.75rem;">
+              Mark Read
+            </button>
+            {% else %}
+            <small class="text-success"><i class="fas fa-check mr-1"></i>Read</small>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <div class="card-footer">
+      <nav>
+        <ul class="pagination pagination-sm mb-0 justify-content-center">
+          {% if page_obj.has_previous %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                <i class="fas fa-chevron-left"></i>
+              </a>
+            </li>
+          {% endif %}
+          <li class="page-item active">
+            <span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+          </li>
+          {% if page_obj.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                <i class="fas fa-chevron-right"></i>
+              </a>
+            </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="fas fa-bell-slash fa-3x mb-3"></i>
+      <h5>No Notifications</h5>
+      <p>You have no meeting notifications at this time.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Mark individual notification read
+document.querySelectorAll('.mark-read-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        const id = this.getAttribute('data-id');
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+        fetch(`{% url 'meetings:notification_read' 0 %}`.replace('0', id), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrf ? csrf.value : getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            }
+        }).then(r => r.json()).then(data => {
+            if (data.status === 'success') {
+                const row = document.getElementById('notif-' + id);
+                if (row) {
+                    row.classList.remove('list-group-item-light');
+                    btn.remove();
+                }
+            }
+        });
+    });
+});
+
+// Mark all read
+const markAllBtn = document.getElementById('markAllReadBtn');
+if (markAllBtn) {
+    markAllBtn.addEventListener('click', function() {
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]');
+        fetch('{% url "meetings:notifications_read_all" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrf ? csrf.value : getCookie('csrftoken'),
+            }
+        }).then(r => r.json()).then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            }
+        });
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

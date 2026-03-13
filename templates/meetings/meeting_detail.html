@@ -1,0 +1,459 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}{{ meeting.meeting_number }} — Meeting Detail{% endblock %}
+{% block page_title %}Meeting Detail{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:meeting_list' %}">Meetings</a></li>
+<li class="breadcrumb-item active">{{ meeting.meeting_number }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .action-overdue { background-color: #fff5f5; }
+  .section-divider {
+    border-left: 4px solid #007bff;
+    padding-left: 12px;
+    margin-bottom: 16px;
+    font-weight: 600;
+    color: #343a40;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ══ Header Row ══ -->
+<div class="row mb-3">
+  <div class="col-md-8">
+    <div class="ehs-card">
+      <div class="card-header d-flex justify-content-between align-items-center
+        {% if meeting.status == 'COMPLETED' %}bg-success text-white
+        {% elif meeting.status == 'CANCELLED' %}bg-danger text-white
+        {% elif meeting.status == 'IN_PROGRESS' %}bg-info text-white
+        {% else %}bg-primary text-white{% endif %}">
+        <h4 class="card-title mb-0">
+          <i class="fas fa-users mr-2"></i>{{ meeting.meeting_number }}
+        </h4>
+        <div>
+          <span class="badge badge-light text-dark">{{ meeting.get_status_display }}</span>
+          {% if meeting.mom_published %}
+            <span class="badge badge-success ml-1"><i class="fas fa-check mr-1"></i>MOM Published</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="card-body">
+        <h5 class="mb-3">{{ meeting.title }}</h5>
+        <div class="row">
+          <div class="col-md-6">
+            <table class="table table-sm table-borderless mb-0">
+              <tr>
+                <td class="text-muted" style="width:40%">Meeting Type</td>
+                <td><span class="badge badge-info">{{ meeting.get_meeting_type_display }}</span></td>
+              </tr>
+              <tr>
+                <td class="text-muted">Scheduled</td>
+                <td>{{ meeting.scheduled_date|date:"d M Y" }} at {{ meeting.scheduled_time|time:"H:i" }}
+                  {% if meeting.end_time %} – {{ meeting.end_time|time:"H:i" }}{% endif %}
+                </td>
+              </tr>
+              {% if meeting.actual_date %}
+              <tr>
+                <td class="text-muted">Conducted On</td>
+                <td>{{ meeting.actual_date|date:"d M Y" }}</td>
+              </tr>
+              {% endif %}
+              <tr>
+                <td class="text-muted">Chairperson</td>
+                <td>{{ meeting.chairperson.get_full_name|default:"—" }}</td>
+              </tr>
+            </table>
+          </div>
+          <div class="col-md-6">
+            <table class="table table-sm table-borderless mb-0">
+              <tr>
+                <td class="text-muted" style="width:40%">Plant</td>
+                <td>{{ meeting.plant.name }}</td>
+              </tr>
+              <tr>
+                <td class="text-muted">Location</td>
+                <td>{{ meeting.location.name }}</td>
+              </tr>
+              {% if meeting.venue_details %}
+              <tr>
+                <td class="text-muted">Venue</td>
+                <td>{{ meeting.venue_details }}</td>
+              </tr>
+              {% endif %}
+              <tr>
+                <td class="text-muted">Created By</td>
+                <td>{{ meeting.created_by.get_full_name }}</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+
+        {% if meeting.agenda %}
+        <hr>
+        <strong>Agenda:</strong>
+        <p class="mt-1 text-muted small">{{ meeting.agenda|linebreaksbr }}</p>
+        {% endif %}
+
+        {% if meeting.agenda_attachment %}
+        <a href="{{ meeting.agenda_attachment.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+          <i class="fas fa-file-download mr-1"></i> Download Agenda
+        </a>
+        {% endif %}
+
+        {% if meeting.status == 'CANCELLED' and meeting.cancelled_reason %}
+        <div class="alert alert-danger mt-3 mb-0">
+          <strong>Cancellation Reason:</strong> {{ meeting.cancelled_reason }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Stats + Actions -->
+  <div class="col-md-4">
+    <!-- Attendance Stats -->
+    <div class="ehs-card mb-3">
+      <div class="card-header"><h6 class="mb-0"><i class="fas fa-users mr-2"></i>Attendance</h6></div>
+      <div class="card-body text-center">
+        <div class="row">
+          <div class="col-4">
+            <div class="h3 text-primary">{{ meeting.total_invited }}</div>
+            <small class="text-muted">Invited</small>
+          </div>
+          <div class="col-4">
+            <div class="h3 text-success">{{ meeting.total_present }}</div>
+            <small class="text-muted">Present</small>
+          </div>
+          <div class="col-4">
+            <div class="h3 {% if meeting.attendance_percentage >= 75 %}text-success{% elif meeting.attendance_percentage >= 50 %}text-warning{% else %}text-danger{% endif %}">
+              {{ meeting.attendance_percentage }}%
+            </div>
+            <small class="text-muted">Rate</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="ehs-card">
+      <div class="card-header"><h6 class="mb-0"><i class="fas fa-bolt mr-2"></i>Actions</h6></div>
+      <div class="card-body">
+
+        {% if meeting.status in 'SCHEDULED,IN_PROGRESS' %}
+
+          {% if can_add_attendees %}
+          <a href="{% url 'meetings:add_attendees' meeting.pk %}"
+             class="btn btn-outline-primary btn-block mb-2">
+            <i class="fas fa-user-plus mr-1"></i> Add Attendees
+          </a>
+          {% endif %}
+
+          {% if can_mark_attendance %}
+          <a href="{% url 'meetings:mark_attendance' meeting.pk %}"
+             class="btn btn-success btn-block mb-2">
+            <i class="fas fa-user-check mr-1"></i> Mark Attendance
+          </a>
+          {% endif %}
+
+          {% if can_add_action %}
+          <a href="{% url 'meetings:add_action_item' meeting.pk %}"
+             class="btn btn-outline-warning btn-block mb-2">
+            <i class="fas fa-tasks mr-1"></i> Add Action Item
+          </a>
+          {% endif %}
+
+          {% if can_complete %}
+          <a href="{% url 'meetings:meeting_complete' meeting.pk %}"
+             class="btn btn-primary btn-block mb-2">
+            <i class="fas fa-check-circle mr-1"></i> Complete &amp; Record MOM
+          </a>
+          {% endif %}
+
+          {% if can_edit %}
+          <a href="{% url 'meetings:meeting_edit' meeting.pk %}"
+             class="btn btn-outline-secondary btn-block mb-2">
+            <i class="fas fa-edit mr-1"></i> Edit Meeting
+          </a>
+          {% endif %}
+
+          {% if can_cancel %}
+          <a href="{% url 'meetings:meeting_cancel' meeting.pk %}"
+             class="btn btn-outline-danger btn-block">
+            <i class="fas fa-times mr-1"></i> Cancel Meeting
+          </a>
+          {% endif %}
+
+        {% elif meeting.status == 'COMPLETED' %}
+
+          {% if can_add_action %}
+          <a href="{% url 'meetings:add_action_item' meeting.pk %}"
+             class="btn btn-outline-warning btn-block mb-2">
+            <i class="fas fa-tasks mr-1"></i> Add Action Item
+          </a>
+          {% endif %}
+
+          {% if can_publish_mom %}
+          <a href="{% url 'meetings:publish_mom' meeting.pk %}"
+             class="btn btn-success btn-block mb-2">
+            <i class="fas fa-paper-plane mr-1"></i> Publish MOM
+          </a>
+          {% endif %}
+
+          {% if meeting.mom_published %}
+          <div class="alert alert-success mb-0 py-2">
+            <i class="fas fa-check-circle mr-1"></i>
+            MOM published on {{ meeting.mom_published_at|date:"d M Y H:i" }}
+          </div>
+          {% endif %}
+
+        {% elif meeting.status == 'CANCELLED' %}
+          <div class="alert alert-danger mb-0">
+            <i class="fas fa-ban mr-1"></i> Meeting was cancelled.
+          </div>
+        {% endif %}
+
+      </div>
+    </div>
+
+    <!-- Open Actions count badge -->
+    {% if open_actions > 0 %}
+    <div class="alert alert-warning mt-2 mb-0">
+      <i class="fas fa-exclamation-triangle mr-1"></i>
+      <strong>{{ open_actions }}</strong> open action item{{ open_actions|pluralize }} pending
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- ══ Attendees Table ══ -->
+<div class="row">
+  <div class="col-12 mb-4">
+    <div class="ehs-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-users mr-2"></i>Attendees ({{ meeting.total_invited }})</h5>
+        {% if can_add_attendees %}
+        <a href="{% url 'meetings:add_attendees' meeting.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="fas fa-user-plus mr-1"></i> Add
+        </a>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if attendees %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr>
+                <th>#</th>
+                <th>Employee</th>
+                <th>Department</th>
+                <th>Attendance</th>
+                <th>Signed</th>
+                <th>Remarks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for a in attendees %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>
+                  <strong>{{ a.employee.get_full_name }}</strong><br>
+                  <small class="text-muted">{{ a.employee.employee_id }}</small>
+                </td>
+                <td><small>{{ a.employee.department.name|default:"—" }}</small></td>
+                <td>
+                  {% if a.attendance_status == 'PRESENT' %}
+                    <span class="badge badge-success">Present</span>
+                  {% elif a.attendance_status == 'ABSENT' %}
+                    <span class="badge badge-danger">Absent</span>
+                  {% elif a.attendance_status == 'ONLINE' %}
+                    <span class="badge badge-info">Online</span>
+                  {% else %}
+                    <span class="badge badge-secondary">Invited</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if a.signed %}
+                    <i class="fas fa-check text-success"></i>
+                  {% else %}
+                    <i class="fas fa-times text-muted"></i>
+                  {% endif %}
+                </td>
+                <td><small class="text-muted">{{ a.remarks|default:"—" }}</small></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-user-slash fa-2x mb-2"></i>
+          <p>No attendees added yet.</p>
+          {% if can_add_attendees %}
+          <a href="{% url 'meetings:add_attendees' meeting.pk %}" class="btn btn-sm btn-primary">
+            Add Attendees
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+      {% if can_mark_attendance and attendees %}
+      <div class="card-footer text-right">
+        <a href="{% url 'meetings:mark_attendance' meeting.pk %}" class="btn btn-sm btn-success">
+          <i class="fas fa-user-check mr-1"></i> Mark Attendance
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ══ Minutes of Meeting ══ (shown when completed) -->
+{% if meeting.status == 'COMPLETED' and meeting.minutes_of_meeting %}
+<div class="row">
+  <div class="col-12 mb-4">
+    <div class="ehs-card">
+      <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="fas fa-file-alt mr-2"></i>Minutes of Meeting</h5>
+      </div>
+      <div class="card-body">
+        <p class="mb-0" style="white-space: pre-wrap;">{{ meeting.minutes_of_meeting }}</p>
+        {% if meeting.mom_attachment %}
+        <hr>
+        <a href="{{ meeting.mom_attachment.url }}" target="_blank" class="btn btn-sm btn-outline-success">
+          <i class="fas fa-file-download mr-1"></i> Download Signed MOM
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ Action Items ══ -->
+<div class="row">
+  <div class="col-12 mb-4">
+    <div class="ehs-card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+          <i class="fas fa-tasks mr-2"></i>Action Items
+          {% if open_actions > 0 %}
+            <span class="badge badge-warning ml-1">{{ open_actions }} Open</span>
+          {% endif %}
+        </h5>
+        {% if can_add_action %}
+        <a href="{% url 'meetings:add_action_item' meeting.pk %}" class="btn btn-sm btn-outline-warning">
+          <i class="fas fa-plus mr-1"></i> Add Action
+        </a>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        {% if action_items %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr>
+                <th>#</th>
+                <th>Description</th>
+                <th>Assigned To</th>
+                <th>Due Date</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Hazard</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for action in action_items %}
+              <tr class="{% if action.is_overdue and action.status != 'CLOSED' %}action-overdue{% endif %}">
+                <td>{{ forloop.counter }}</td>
+                <td>
+                  {{ action.description|truncatechars:50 }}
+                  {% if action.is_overdue and action.status != 'CLOSED' %}
+                    <br><span class="badge badge-danger">{{ action.days_overdue }}d overdue</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <small>{{ action.assigned_to.get_full_name|default:"—" }}</small>
+                </td>
+                <td><small>{{ action.due_date|date:"d M Y" }}</small></td>
+                <td>
+                  {% if action.priority == 'URGENT' %}
+                    <span class="badge badge-danger">Urgent</span>
+                  {% elif action.priority == 'HIGH' %}
+                    <span class="badge badge-warning">High</span>
+                  {% elif action.priority == 'MEDIUM' %}
+                    <span class="badge badge-info">Medium</span>
+                  {% else %}
+                    <span class="badge badge-secondary">Low</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if action.status == 'OPEN' %}
+                    <span class="badge badge-danger">Open</span>
+                  {% elif action.status == 'IN_PROGRESS' %}
+                    <span class="badge badge-warning">In Progress</span>
+                  {% elif action.status == 'CLOSED' %}
+                    <span class="badge badge-success">Closed</span>
+                  {% else %}
+                    <span class="badge badge-secondary">Cancelled</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if action.escalated_to_hazard %}
+                    <a href="{% url 'hazards:report_detail' action.hazard_report.pk %}"
+                       class="badge badge-danger" title="View Hazard Report">
+                      <i class="fas fa-exclamation-triangle"></i> Hazard
+                    </a>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if action.status != 'CLOSED' %}
+                    {% if action.assigned_to == request.user or request.user.can_manage_meeting_action_items or request.user.is_superuser %}
+                    <a href="{% url 'meetings:close_action_item' action.pk %}"
+                       class="btn btn-sm btn-outline-success" title="Close">
+                      <i class="fas fa-check"></i>
+                    </a>
+                    {% endif %}
+                    {% if not action.escalated_to_hazard %}
+                      {% if request.user.can_manage_meeting_action_items or request.user.is_superuser %}
+                      <a href="{% url 'meetings:escalate_to_hazard' action.pk %}"
+                         class="btn btn-sm btn-outline-danger ml-1" title="Escalate to Hazard">
+                        <i class="fas fa-exclamation-triangle"></i>
+                      </a>
+                      {% endif %}
+                    {% endif %}
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-clipboard-check fa-2x mb-2"></i>
+          <p>No action items yet.</p>
+          {% if can_add_action %}
+          <a href="{% url 'meetings:add_action_item' meeting.pk %}" class="btn btn-sm btn-warning">
+            Add Action Item
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

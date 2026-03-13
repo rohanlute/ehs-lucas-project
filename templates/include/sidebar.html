@@ -742,6 +742,65 @@
           </ul>
         </li>
         {% endif %}
+        <!-- SAFETY MEETING MANAGEMENT -->
+          {% if user.can_access_meeting_module or user.is_superuser %}
+          <li class="nav-item {% if 'meetings' in request.path %}menu-open{% endif %}">
+            <a href="#" class="nav-link {% if 'meetings' in request.path %}active{% endif %}">
+              <i class="nav-icon fas fa-users"></i>
+              <p>Safety Meetings <i class="right fas fa-angle-left"></i></p>
+            </a>
+            <ul class="nav nav-treeview">
+
+              <li class="nav-item">
+                <a href="{% url 'meetings:dashboard' %}"
+                  class="nav-link {% if request.resolver_match.url_name == 'dashboard' and 'meetings' in request.path %}active{% endif %}">
+                  <i class="nav-icon far fa-circle"></i>
+                  <p>Dashboard</p>
+                </a>
+              </li>
+
+              {% if user.can_create_meeting or user.is_superuser %}
+              <li class="nav-item">
+                <a href="{% url 'meetings:meeting_create' %}"
+                  class="nav-link {% if request.resolver_match.url_name == 'meeting_create' %}active{% endif %}">
+                  <i class="nav-icon far fa-circle"></i>
+                  <p>Schedule Meeting</p>
+                </a>
+              </li>
+              {% endif %}
+
+              <li class="nav-item">
+                <a href="{% url 'meetings:meeting_list' %}"
+                  class="nav-link {% if request.resolver_match.url_name == 'meeting_list' %}active{% endif %}">
+                  <i class="nav-icon far fa-circle"></i>
+                  <p>All Meetings</p>
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a href="{% url 'meetings:my_meetings' %}"
+                  class="nav-link {% if request.resolver_match.url_name == 'my_meetings' %}active{% endif %}">
+                  <i class="nav-icon far fa-circle"></i>
+                  <p>My Meetings</p>
+                </a>
+              </li>
+
+              <li class="nav-item">
+                <a href="{% url 'meetings:notifications' %}"
+                  class="nav-link {% if request.resolver_match.url_name == 'notifications' and 'meetings' in request.path %}active{% endif %}">
+                  <i class="nav-icon fas fa-bell"></i>
+                  <p>
+                    Notifications
+                    {% if meeting_unread_count > 0 %}
+                      <span class="badge badge-danger right">{{ meeting_unread_count }}</span>
+                    {% endif %}
+                  </p>
+                </a>
+              </li>
+
+            </ul>
+          </li>
+          {% endif %}
       </ul>
     </nav>
   </div>

@@ -1,0 +1,615 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Safety Meeting Dashboard{% endblock %}
+{% block page_title %}Safety Meeting Dashboard{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item active">Safety Meetings</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .stat-card {
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); }
+  .stat-number { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .stat-label  { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; }
+  .stat-icon   { font-size: 2rem; opacity: 0.7; }
+  .chart-card  { border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .action-overdue { background-color: #fff5f5; }
+  .rate-badge { font-size: 1.3rem; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Quick Actions -->
+<div class="row mb-3">
+  <div class="col-12 d-flex flex-wrap gap-2">
+    {% if request.user.can_create_meeting or request.user.is_superuser %}
+    <a href="{% url 'meetings:meeting_create' %}" class="btn btn-primary">
+      <i class="fas fa-plus mr-1"></i> Schedule Meeting
+    </a>
+    {% endif %}
+    <a href="{% url 'meetings:meeting_list' %}" class="btn btn-outline-secondary">
+      <i class="fas fa-list mr-1"></i> All Meetings
+    </a>
+    <a href="{% url 'meetings:my_meetings' %}" class="btn btn-outline-info">
+      <i class="fas fa-user mr-1"></i> My Meetings
+    </a>
+    <a href="{% url 'meetings:notifications' %}" class="btn btn-outline-warning">
+      <i class="fas fa-bell mr-1"></i> Notifications
+      {% if unread_count > 0 %}
+        <span class="badge badge-danger">{{ unread_count }}</span>
+      {% endif %}
+    </a>
+  </div>
+</div>
+
+<!-- ══ Row 1: Stat Cards ══ -->
+<div class="row mb-3">
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-primary text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ total }}</div>
+          <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{% url 'meetings:meeting_list' %}" class="text-white-50 small">View all →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-warning text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ scheduled }}</div>
+          <div class="stat-label">Scheduled</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{% url 'meetings:meeting_list' %}?status=SCHEDULED" class="text-white-50 small">View →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-success text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ completed }}</div>
+          <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <a href="{% url 'meetings:meeting_list' %}?status=COMPLETED" class="text-white-50 small">View →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-danger text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ overdue_count }}</div>
+          <div class="stat-label">Overdue</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-exclamation-circle"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <small class="text-white-50">Past scheduled date</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card bg-info text-white h-100">
+      <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+          <div class="stat-number">{{ open_actions }}</div>
+          <div class="stat-label">Open Actions</div>
+        </div>
+        <div class="stat-icon"><i class="fas fa-tasks"></i></div>
+      </div>
+      <div class="card-footer bg-transparent border-0 pt-0">
+        <small class="text-white-50">{{ overdue_actions_count }} overdue</small>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
+    <div class="card stat-card h-100" style="border-left: 4px solid #6f42c1;">
+      <div class="card-body text-center">
+        <div class="rate-badge text-{% if this_month_rate >= 75 %}success{% elif this_month_rate >= 50 %}warning{% else %}danger{% endif %}">
+          {{ this_month_rate }}%
+        </div>
+        <div class="stat-label text-muted mt-1">Action Closure Rate</div>
+        <small class="text-muted">
+          This month
+          {% if this_month_rate > last_month_rate %}
+            <i class="fas fa-arrow-up text-success"></i>
+          {% elif this_month_rate < last_month_rate %}
+            <i class="fas fa-arrow-down text-danger"></i>
+          {% else %}
+            <i class="fas fa-minus text-secondary"></i>
+          {% endif %}
+          vs {{ last_month_rate }}% last month
+        </small>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Row 2: Charts Row 1 ══ -->
+<div class="row mb-3">
+
+  <!-- Monthly Trend — Line Chart -->
+  <div class="col-md-8 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-line mr-2 text-primary"></i>
+          Monthly Meeting Trend (Last 6 Months)
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="monthlyTrendChart" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meetings by Type — Doughnut -->
+  <div class="col-md-4 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-chart-pie mr-2 text-info"></i>
+          Meetings by Type
+        </h5>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="typeChart" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Row 3: Charts Row 2 ══ -->
+<div class="row mb-3">
+
+  <!-- Attendance Rate — Last 10 Completed (Bar) -->
+  <div class="col-md-6 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-user-check mr-2 text-success"></i>
+          Attendance Rate — Last 10 Completed Meetings
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="attendanceChart" height="140"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Meetings by Plant (Horizontal Bar) -->
+  <div class="col-md-3 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-industry mr-2 text-warning"></i>
+          Meetings by Plant
+        </h5>
+      </div>
+      <div class="card-body">
+        <canvas id="plantChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Open Action Items by Priority (Doughnut) -->
+  <div class="col-md-3 mb-3">
+    <div class="card chart-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-tasks mr-2 text-danger"></i>
+          Open Actions by Priority
+        </h5>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center">
+        <canvas id="priorityChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Row 4: Upcoming + Overdue ══ -->
+<div class="row mb-3">
+
+  <!-- Upcoming Meetings -->
+  <div class="col-md-6 mb-3">
+    <div class="ehs-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-calendar-alt mr-2 text-primary"></i>
+          Upcoming Meetings <small class="text-muted">(Next 30 Days)</small>
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if upcoming %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr><th>Meeting</th><th>Date</th><th>Type</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for m in upcoming %}
+              <tr>
+                <td>
+                  <strong>{{ m.title|truncatechars:28 }}</strong><br>
+                  <small class="text-muted">{{ m.meeting_number }}</small>
+                </td>
+                <td>
+                  {{ m.scheduled_date|date:"d M Y" }}<br>
+                  <small class="text-muted">{{ m.scheduled_time|time:"H:i" }}</small>
+                </td>
+                <td><span class="badge badge-info" style="font-size:.7rem;">{{ m.get_meeting_type_display }}</span></td>
+                <td>
+                  <a href="{% url 'meetings:meeting_detail' m.pk %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-calendar-times fa-2x mb-2"></i>
+          <p>No upcoming meetings in next 30 days</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer text-right">
+        <a href="{% url 'meetings:meeting_list' %}?status=SCHEDULED" class="btn btn-sm btn-outline-primary">
+          View All Scheduled →
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- My Open Action Items -->
+  <div class="col-md-6 mb-3">
+    <div class="ehs-card h-100">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-tasks mr-2 text-warning"></i>
+          My Open Action Items
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if my_action_items %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr><th>Action</th><th>Meeting</th><th>Due</th><th>Priority</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for action in my_action_items %}
+              <tr class="{% if action.is_overdue %}action-overdue{% endif %}">
+                <td>
+                  <small>{{ action.description|truncatechars:35 }}</small>
+                  {% if action.is_overdue %}
+                    <br><span class="badge badge-danger">{{ action.days_overdue }}d overdue</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="{% url 'meetings:meeting_detail' action.meeting.pk %}">
+                    <small>{{ action.meeting.meeting_number }}</small>
+                  </a>
+                </td>
+                <td><small>{{ action.due_date|date:"d M Y" }}</small></td>
+                <td>
+                  {% if action.priority == 'URGENT' %}<span class="badge badge-danger">Urgent</span>
+                  {% elif action.priority == 'HIGH' %}<span class="badge badge-warning">High</span>
+                  {% elif action.priority == 'MEDIUM' %}<span class="badge badge-info">Medium</span>
+                  {% else %}<span class="badge badge-secondary">Low</span>{% endif %}
+                </td>
+                <td>
+                  <a href="{% url 'meetings:close_action_item' action.pk %}" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-check"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-clipboard-check fa-2x mb-2 text-success"></i>
+          <p>No open action items assigned to you</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ Overdue Meetings Alert ══ -->
+{% if overdue_meetings %}
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="ehs-card border-danger">
+      <div class="card-header bg-danger text-white">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          Overdue Meetings — Immediate Attention Required
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr><th>Meeting #</th><th>Title</th><th>Scheduled</th><th>Plant</th><th>Chairperson</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for m in overdue_meetings %}
+              <tr class="table-danger">
+                <td><a href="{% url 'meetings:meeting_detail' m.pk %}"><strong>{{ m.meeting_number }}</strong></a></td>
+                <td>{{ m.title }}</td>
+                <td>{{ m.scheduled_date|date:"d M Y" }}</td>
+                <td>{{ m.plant.name }}</td>
+                <td>{{ m.chairperson.get_full_name|default:"—" }}</td>
+                <td><a href="{% url 'meetings:meeting_detail' m.pk %}" class="btn btn-sm btn-danger"><i class="fas fa-eye mr-1"></i>View</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ Recent Completed ══ -->
+<div class="row">
+  <div class="col-12 mb-3">
+    <div class="ehs-card">
+      <div class="card-header">
+        <h5 class="card-title mb-0">
+          <i class="fas fa-history mr-2 text-success"></i>
+          Recently Completed Meetings
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        {% if recent_completed %}
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead class="thead-light">
+              <tr><th>Meeting #</th><th>Title</th><th>Type</th><th>Plant</th><th>Attendance</th><th>MOM</th><th>Open Actions</th><th></th></tr>
+            </thead>
+            <tbody>
+              {% for m in recent_completed %}
+              <tr>
+                <td><a href="{% url 'meetings:meeting_detail' m.pk %}"><strong>{{ m.meeting_number }}</strong></a></td>
+                <td>{{ m.title|truncatechars:30 }}</td>
+                <td><span class="badge badge-secondary" style="font-size:.7rem;">{{ m.get_meeting_type_display }}</span></td>
+                <td>{{ m.plant.name }}</td>
+                <td>
+                  <span class="badge badge-{% if m.attendance_percentage >= 75 %}success{% elif m.attendance_percentage >= 50 %}warning{% else %}danger{% endif %}">
+                    {{ m.total_present }}/{{ m.total_invited }} ({{ m.attendance_percentage }}%)
+                  </span>
+                </td>
+                <td>
+                  {% if m.mom_published %}
+                    <span class="text-success"><i class="fas fa-check"></i> Published</span>
+                  {% else %}
+                    <span class="text-warning">Pending</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if m.open_action_items_count > 0 %}
+                    <span class="badge badge-warning">{{ m.open_action_items_count }}</span>
+                  {% else %}
+                    <span class="text-success">—</span>
+                  {% endif %}
+                </td>
+                <td><a href="{% url 'meetings:meeting_detail' m.pk %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-eye"></i></a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-inbox fa-2x mb-2"></i><p>No completed meetings yet</p>
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer text-right">
+        <a href="{% url 'meetings:meeting_list' %}?status=COMPLETED" class="btn btn-sm btn-outline-success">View All Completed →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+// ── Chart.js defaults ──
+Chart.defaults.font.family = "'Source Sans Pro', sans-serif";
+Chart.defaults.font.size   = 12;
+
+const COLORS = {
+  blue:   '#007bff',
+  green:  '#28a745',
+  orange: '#fd7e14',
+  red:    '#dc3545',
+  teal:   '#20c997',
+  purple: '#6f42c1',
+  yellow: '#ffc107',
+  gray:   '#6c757d',
+};
+
+const PALETTE = Object.values(COLORS);
+
+// ── 1. Monthly Trend (Line) ──
+new Chart(document.getElementById('monthlyTrendChart'), {
+  type: 'line',
+  data: {
+    labels: {{ monthly_labels|safe }},
+    datasets: [
+      {
+        label: 'Total Scheduled',
+        data: {{ monthly_totals|safe }},
+        borderColor: COLORS.blue,
+        backgroundColor: 'rgba(0,123,255,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+      },
+      {
+        label: 'Completed',
+        data: {{ monthly_completed|safe }},
+        borderColor: COLORS.green,
+        backgroundColor: 'rgba(40,167,69,0.08)',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { position: 'top' } },
+    scales: {
+      y: { beginAtZero: true, ticks: { stepSize: 1 } },
+    },
+  },
+});
+
+// ── 2. Meetings by Type (Doughnut) ──
+new Chart(document.getElementById('typeChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ type_labels|safe }},
+    datasets: [{
+      data: {{ type_counts|safe }},
+      backgroundColor: PALETTE,
+      borderWidth: 2,
+      borderColor: '#fff',
+    }],
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8 } },
+    },
+    cutout: '60%',
+  },
+});
+
+// ── 3. Attendance Rate (Bar) ──
+const attRates = {{ attendance_rates|safe }};
+new Chart(document.getElementById('attendanceChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ attendance_labels|safe }},
+    datasets: [{
+      label: 'Attendance %',
+      data: attRates,
+      backgroundColor: attRates.map(v =>
+        v >= 75 ? 'rgba(40,167,69,0.75)' :
+        v >= 50 ? 'rgba(255,193,7,0.75)' :
+                  'rgba(220,53,69,0.75)'
+      ),
+      borderRadius: 4,
+    }],
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } },
+      x: { ticks: { maxRotation: 45 } },
+    },
+  },
+});
+
+// ── 4. Meetings by Plant (Horizontal Bar) ──
+new Chart(document.getElementById('plantChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ plant_labels|safe }},
+    datasets: [
+      {
+        label: 'Total',
+        data: {{ plant_totals|safe }},
+        backgroundColor: 'rgba(0,123,255,0.65)',
+        borderRadius: 4,
+      },
+      {
+        label: 'Completed',
+        data: {{ plant_completed|safe }},
+        backgroundColor: 'rgba(40,167,69,0.65)',
+        borderRadius: 4,
+      },
+    ],
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+    scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } },
+  },
+});
+
+// ── 5. Open Actions by Priority (Doughnut) ──
+const priorityColors = {
+  'LOW': COLORS.gray, 'MEDIUM': COLORS.teal,
+  'HIGH': COLORS.orange, 'URGENT': COLORS.red,
+};
+const pLabels = {{ priority_labels|safe }};
+new Chart(document.getElementById('priorityChart'), {
+  type: 'doughnut',
+  data: {
+    labels: pLabels,
+    datasets: [{
+      data: {{ priority_counts|safe }},
+      backgroundColor: pLabels.map(l => priorityColors[l] || COLORS.gray),
+      borderWidth: 2,
+      borderColor: '#fff',
+    }],
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, padding: 8 } },
+    },
+    cutout: '55%',
+  },
+});
+</script>
+{% endblock %}

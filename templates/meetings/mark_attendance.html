@@ -1,0 +1,120 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Mark Attendance — {{ meeting.meeting_number }}{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:meeting_detail' meeting.pk %}">{{ meeting.meeting_number }}</a></li>
+<li class="breadcrumb-item active">Mark Attendance</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-12">
+    <div class="ehs-card">
+      <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <h4 class="card-title mb-0">
+          <i class="fas fa-user-check mr-2"></i>Mark Attendance — {{ meeting.meeting_number }}
+        </h4>
+        <small>{{ meeting.title }}</small>
+      </div>
+
+      <div class="card-body">
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle mr-2"></i>
+          <strong>{{ meeting.scheduled_date|date:"d M Y" }}</strong> at {{ meeting.scheduled_time|time:"H:i" }}
+          | <strong>{{ meeting.location.name }}</strong>
+          {% if meeting.venue_details %} — {{ meeting.venue_details }}{% endif %}
+        </div>
+
+        {% if formset.forms %}
+        <form method="POST" id="attendanceForm">
+          {% csrf_token %}
+          {{ formset.management_form }}
+
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="thead-light">
+                <tr>
+                  <th>#</th>
+                  <th>Employee</th>
+                  <th>Department</th>
+                  <th style="width: 150px;">Attendance Status</th>
+                  <th style="width: 80px;">Signed</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for form in formset %}
+                  {{ form.id }}
+                  <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                      <strong>{{ form.instance.employee.get_full_name }}</strong><br>
+                      <small class="text-muted">{{ form.instance.employee.employee_id }}</small>
+                    </td>
+                    <td><small>{{ form.instance.employee.department.name|default:"—" }}</small></td>
+                    <td>{{ form.attendance_status }}</td>
+                    <td class="text-center">{{ form.signed }}</td>
+                    <td>{{ form.remarks }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="d-flex gap-2 mb-3">
+            <button type="button" class="btn btn-sm btn-outline-success" onclick="markAll('PRESENT')">
+              <i class="fas fa-check mr-1"></i> Mark All Present
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="markAll('ABSENT')">
+              <i class="fas fa-times mr-1"></i> Mark All Absent
+            </button>
+          </div>
+
+          <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+              <i class="fas fa-save mr-1"></i> Save Attendance
+            </button>
+            <a href="{% url 'meetings:meeting_detail' meeting.pk %}" class="btn btn-secondary btn-lg">
+              <i class="fas fa-times mr-1"></i> Cancel
+            </a>
+          </div>
+        </form>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-user-slash fa-2x mb-2"></i>
+          <p>No attendees to mark. Please add attendees first.</p>
+          <a href="{% url 'meetings:add_attendees' meeting.pk %}" class="btn btn-primary">
+            Add Attendees
+          </a>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAll(status) {
+    document.querySelectorAll('select[name*="attendance_status"]').forEach(function(sel) {
+        sel.value = status;
+    });
+}
+
+document.getElementById('attendanceForm') && document.getElementById('attendanceForm')
+    .addEventListener('submit', function() {
+        const btn = document.getElementById('submitBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...';
+        }
+    });
+</script>
+{% endblock %}

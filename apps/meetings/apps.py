@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class SafetyMeetingConfig(AppConfig):
+class MeetingsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'safety_meeting'
+    name = 'apps.meetings'

@@ -1,0 +1,50 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Cancel Meeting — {{ meeting.meeting_number }}{% endblock %}
+{% block page_title %}Cancel Meeting{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:meeting_detail' meeting.pk %}">{{ meeting.meeting_number }}</a></li>
+<li class="breadcrumb-item active">Cancel</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-md-6 offset-md-3">
+    <div class="ehs-card">
+      <div class="card-header bg-danger text-white">
+        <h4 class="card-title mb-0">
+          <i class="fas fa-ban mr-2"></i>Cancel Meeting
+        </h4>
+      </div>
+      <form method="POST">
+        {% csrf_token %}
+        <div class="card-body">
+          <div class="alert alert-warning">
+            <strong>{{ meeting.meeting_number }}</strong> — {{ meeting.title }}<br>
+            <small>{{ meeting.scheduled_date|date:"d M Y" }} at {{ meeting.scheduled_time|time:"H:i" }}</small>
+          </div>
+          <p class="text-muted">All invited attendees will be notified of the cancellation.</p>
+          <div class="form-group">
+            <label for="id_cancelled_reason">Reason for Cancellation <span class="text-danger">*</span></label>
+            {{ form.cancelled_reason }}
+            {% if form.cancelled_reason.errors %}
+              <div class="text-danger small">{{ form.cancelled_reason.errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-ban mr-1"></i> Confirm Cancellation
+          </button>
+          <a href="{% url 'meetings:meeting_detail' meeting.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-1"></i> Go Back
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

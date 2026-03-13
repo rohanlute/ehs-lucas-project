@@ -1,0 +1,191 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}My Meetings{% endblock %}
+{% block page_title %}My Meetings{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'dashboards:home' %}">Home</a></li>
+<li class="breadcrumb-item"><a href="{% url 'meetings:dashboard' %}">Safety Meetings</a></li>
+<li class="breadcrumb-item active">My Meetings</li>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="row mb-4">
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-primary h-100">
+      <div class="card-body text-center">
+        <div class="h2 text-primary">{{ upcoming_count }}</div>
+        <small class="text-muted">Upcoming</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-warning h-100">
+      <div class="card-body text-center">
+        <div class="h2 text-warning">{{ open_actions_count }}</div>
+        <small class="text-muted">Open Action Items</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-success h-100">
+      <div class="card-body text-center">
+        <div class="h2 text-success">{{ attended_count }}</div>
+        <small class="text-muted">Attended</small>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3 col-sm-6 mb-3">
+    <div class="card border-danger h-100">
+      <div class="card-body text-center">
+        <div class="h2 text-danger">{{ overdue_actions_count }}</div>
+        <small class="text-muted">Overdue Actions</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upcoming Meetings I'm Invited To -->
+<div class="row">
+  <div class="col-12 mb-4">
+    <div class="ehs-card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-calendar-check mr-2 text-primary"></i>My Upcoming Meetings</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if upcoming_meetings %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th>Meeting #</th>
+                  <th>Title</th>
+                  <th>Type</th>
+                  <th>Scheduled Date</th>
+                  <th>Location</th>
+                  <th>My Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in upcoming_meetings %}
+                <tr>
+                  <td>
+                    <a href="{% url 'meetings:meeting_detail' a.meeting.pk %}">
+                      <strong>{{ a.meeting.meeting_number }}</strong>
+                    </a>
+                  </td>
+                  <td>{{ a.meeting.title|truncatechars:35 }}</td>
+                  <td>
+                    <span class="badge badge-info" style="font-size:0.72rem;">
+                      {{ a.meeting.get_meeting_type_display }}
+                    </span>
+                  </td>
+                  <td>
+                    {{ a.meeting.scheduled_date|date:"d M Y" }}<br>
+                    <small class="text-muted">{{ a.meeting.scheduled_time|time:"H:i" }}</small>
+                  </td>
+                  <td><small>{{ a.meeting.location.name }}</small></td>
+                  <td>
+                    {% if a.attendance_status == 'PRESENT' %}
+                      <span class="badge badge-success">Present</span>
+                    {% elif a.attendance_status == 'ABSENT' %}
+                      <span class="badge badge-danger">Absent</span>
+                    {% else %}
+                      <span class="badge badge-secondary">Invited</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{% url 'meetings:meeting_detail' a.meeting.pk %}" class="btn btn-sm btn-outline-primary">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-calendar-times fa-2x mb-2"></i>
+            <p>No upcoming meetings assigned to you.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- My Open Action Items -->
+<div class="row">
+  <div class="col-12 mb-4">
+    <div class="ehs-card">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-tasks mr-2 text-warning"></i>My Open Action Items</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if my_actions %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th>Description</th>
+                  <th>Meeting</th>
+                  <th>Due Date</th>
+                  <th>Priority</th>
+                  <th>Overdue?</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for action in my_actions %}
+                <tr class="{% if action.is_overdue %}table-warning{% endif %}">
+                  <td>{{ action.description|truncatechars:50 }}</td>
+                  <td>
+                    <a href="{% url 'meetings:meeting_detail' action.meeting.pk %}">
+                      {{ action.meeting.meeting_number }}
+                    </a>
+                  </td>
+                  <td>{{ action.due_date|date:"d M Y" }}</td>
+                  <td>
+                    {% if action.priority == 'URGENT' %}
+                      <span class="badge badge-danger">Urgent</span>
+                    {% elif action.priority == 'HIGH' %}
+                      <span class="badge badge-warning">High</span>
+                    {% elif action.priority == 'MEDIUM' %}
+                      <span class="badge badge-info">Medium</span>
+                    {% else %}
+                      <span class="badge badge-secondary">Low</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if action.is_overdue %}
+                      <span class="badge badge-danger">{{ action.days_overdue }}d</span>
+                    {% else %}
+                      <span class="text-success">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <a href="{% url 'meetings:close_action_item' action.pk %}" class="btn btn-sm btn-success">
+                      <i class="fas fa-check mr-1"></i> Close
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-clipboard-check fa-2x mb-2 text-success"></i>
+            <p>All caught up! No open action items.</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -138,6 +138,23 @@ class Command(BaseCommand):
 
             ('CLOSE_TRAINING_SESSION', 'Close Training Session', 'Can mark session as completed',
             'TRAINING', 'CLOSE', 9),
+            # === MEETING MODULE ===
+            ('ACCESS_MEETING_MODULE', 'Access Meeting Module', 'Can access safety meeting module',
+            'MEETING', 'MODULE_ACCESS', 0),
+            ('CREATE_MEETING', 'Create Meeting', 'Can schedule safety meetings',
+            'MEETING', 'CREATE', 1),
+            ('EDIT_MEETING', 'Edit Meeting', 'Can edit scheduled meetings',
+            'MEETING', 'EDIT', 2),
+            ('VIEW_MEETING', 'View Meeting', 'Can view meeting details',
+            'MEETING', 'VIEW', 3),
+            ('MARK_MEETING_ATTENDANCE', 'Mark Meeting Attendance', 'Can mark attendance for meetings',
+            'MEETING', 'MANAGE', 4),
+            ('RECORD_MEETING_MOM', 'Record Minutes of Meeting', 'Can record MOM and complete meeting',
+            'MEETING', 'MANAGE', 5),
+            ('MANAGE_MEETING_ACTION_ITEMS', 'Manage Meeting Action Items', 'Can add/close action items',
+            'MEETING', 'MANAGE', 6),
+            ('CLOSE_MEETING', 'Close Meeting', 'Can mark meeting as completed',
+            'MEETING', 'CLOSE', 7),
         ]
 
         created = 0
