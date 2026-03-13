@@ -222,8 +222,8 @@
           data-widget="treeview" role="menu" data-accordion="false">
 
         <!-- 1. Dashboard (Always visible) -->
-        <li class="nav-item has-treeview {% if url in 'home IncidentAccidentDashboardView hazard_dashboard' %}menu-open{% endif %}">
-          <a href="#" class="nav-link {% if url in 'home IncidentAccidentDashboardView hazard_dashboard' %}active{% endif %}">
+        <li class="nav-item has-treeview {% if url in 'home IncidentAccidentDashboardView hazard_dashboard environment_dashboard waste_dashboard safety_dashboard' %}menu-open{% endif %}">
+          <a href="#" class="nav-link {% if url in 'home IncidentAccidentDashboardView hazard_dashboard environment_dashboard waste_dashboard safety_dashboard' %}active{% endif %}">
             <i class="nav-icon fas fa-tachometer-alt"></i>
             <p>Dashboards<i class="right fas fa-angle-left"></i></p>
           </a>
@@ -256,6 +256,39 @@
               </a>
             </li>
             {% endif %}
+
+            <!-- NEW ENVIRONMENT MIS DASHBOARDS -->
+
+            {% if user|has_perm:'ENVIRONMENT_DASHBOARD' %}
+            <li class="nav-item">
+                <a href="{% url 'environmental_mis:environment_dashboard' %}"
+                    class="nav-link {% if request.resolver_match.url_name == 'environment_dashboard' %}active{% endif %}">
+                    <i class="nav-icon far fa-circle"></i>
+                    <p>Manufacturing Environment Dashboard</p>
+                </a>
+            </li>
+            {% endif %}
+
+            {% if user|has_perm:'WASTE_DASHBOARD' %}
+            <li class="nav-item">
+                <a href="{% url 'environmental_mis:waste_dashboard' %}"
+                    class="nav-link {% if request.resolver_match.url_name == 'waste_dashboard' %}active{% endif %}">
+                    <i class="nav-icon far fa-circle"></i>
+                    <p>Manufacturing Waste Dashboard</p>
+                </a>
+            </li>
+            {% endif %}
+
+            {% if user|has_perm:'SAFETY_DASHBOARD' %}
+            <li class="nav-item">
+                <a href="{% url 'environmental_mis:safety_dashboard' %}"
+                    class="nav-link {% if request.resolver_match.url_name == 'safety_dashboard' %}active{% endif %}">
+                    <i class="nav-icon far fa-circle"></i>
+                    <p>Safety Indicator Dashboard</p>
+                </a>
+            </li>
+            {% endif %}
+
           </ul>
         </li>
 

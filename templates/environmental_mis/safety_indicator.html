@@ -1,0 +1,1285 @@
+{% extends 'base/base.html' %} {% load static %} {% load environment_filters %}
+{% block title %}Safety Indicator Data Entry{% endblock %} {% block extra_css %}
+
+<style>
+  :root {
+    --border: #e2e8f0;
+    --header-bg: #f1f5f9;
+    --total-bg: #eef2ff;
+    --quarter-bg: #f8fafc;
+  }
+
+  /* ================= HEADER ================= */
+
+  .header-section {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    border-radius: 10px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+    color: white;
+  }
+
+  .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .header-info h2 {
+    margin: 0 0 0.75rem;
+    font-size: 1.8rem;
+    font-weight: 700;
+  }
+
+  .plant-info {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    font-size: 0.95rem;
+  }
+
+  /* ================= CONTAINER ================= */
+
+  .env-data-container {
+    padding: 1.5rem;
+    background: #f8fafc;
+  }
+
+  /* ================= TABLE WRAPPER ================= */
+
+  .table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+  }
+
+  /* ================= TABLE ================= */
+
+  .main-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: max-content;
+    min-width: 2200px;
+    table-layout: fixed;
+  }
+
+  /* ================= CELLS ================= */
+
+  .main-table th,
+  .main-table td {
+    border: 1px solid var(--border);
+    padding: 6px;
+    font-size: 12px;
+    text-align: center;
+    vertical-align: middle;
+    background: #fff;
+    box-sizing: border-box;
+  }
+
+  /* ================= HEADER ================= */
+
+  .main-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--header-bg);
+    z-index: 500;
+  }
+
+  /* ================= COLUMN WIDTHS ================= */
+
+  .main-table th:nth-child(1),
+  .main-table td:nth-child(1) {
+    width: 35px;
+  }
+
+  .main-table th:nth-child(2),
+  .main-table td:nth-child(2) {
+    width: 100px;
+  }
+
+  .main-table th:nth-child(3),
+  .main-table td:nth-child(3) {
+    width: 130px;
+  }
+
+  .main-table th:nth-child(4),
+  .main-table td:nth-child(4) {
+    width: 120px;
+  }
+
+  .main-table th:nth-child(5),
+  .main-table td:nth-child(5) {
+    width: 90px;
+  }
+
+  .main-table th:nth-child(6),
+  .main-table td:nth-child(6) {
+    width: 90px;
+  }
+
+  /* ================= STICKY BASE ================= */
+
+  .sticky-col,
+  .sticky-col-2,
+  .sticky-col-3,
+  .sticky-col-4,
+  .sticky-col-5,
+  .sticky-col-6 {
+    position: sticky;
+    background: #fff;
+    z-index: 200;
+    border-right: 1px solid var(--border);
+    box-shadow: 2px 0 3px rgba(0, 0, 0, 0.05);
+  }
+
+  /* ================= HEADER ABOVE BODY ================= */
+
+  .main-table thead .sticky-col,
+  .main-table thead .sticky-col-2,
+  .main-table thead .sticky-col-3,
+  .main-table thead .sticky-col-4,
+  .main-table thead .sticky-col-5,
+  .main-table thead .sticky-col-6 {
+    background: var(--header-bg);
+    z-index: 600;
+  }
+
+  /* ================= MANUFACTURING TABLE ================= */
+
+  #LeadingTable .sticky-col {
+    left: 0;
+  }
+
+  #LeadingTable .sticky-col-2 {
+    left: 35px;
+  }
+
+  #LeadingTable .sticky-col-3 {
+    left: 135px;
+  }
+
+  #LeadingTable .sticky-col-4 {
+    left: 265px;
+  }
+
+
+  /* ================= NON MANUFACTURING TABLE ================= */
+
+  #laggingTable .sticky-col {
+    left: 0;
+  }
+
+  #laggingTable .sticky-col-2 {
+    left: 35px;
+  }
+
+  #laggingTable .sticky-col-3 {
+    left: 135px;
+  }
+
+  #laggingTable .sticky-col-4 {
+    left: 265px;
+  }
+
+
+  /* ================= ROWSPAN FIX ================= */
+
+  .main-table td[rowspan] {
+    vertical-align: middle;
+    background: #fff;
+    z-index: 250;
+  }
+
+  /* ================= INPUT ================= */
+
+  .data-input {
+    width: 90px;
+    height: 28px;
+    padding: 4px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .data-input[readonly] {
+    background: #f1f5f9;
+    font-weight: 500;
+  }
+
+  /* ================= TOTAL ROW ================= */
+
+  .total-row td {
+    background: var(--total-bg);
+    font-weight: 600;
+  }
+
+  /* ================= EMPTY CELLS ================= */
+
+  .empty-cell {
+    background: #fff;
+  }
+
+  .empty-cell::after {
+    content: "";
+    display: block;
+    height: 20px;
+  }
+
+  .main-table td:empty::after {
+    content: "";
+    display: inline-block;
+    height: 18px;
+  }
+
+  /* ================= SCROLLBAR ================= */
+
+  .table-wrapper::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  .table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+  }
+
+  /* ================= PLANT SELECTOR ================= */
+
+  .plant-selector-section {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .plant-selector-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .plant-selector-container label {
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
+
+  .plant-selector-container select {
+    flex: 1;
+    min-width: 250px;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: white;
+    cursor: pointer;
+  }
+
+  .plant-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .content-header {
+    display: none;
+  }
+</style>
+
+{% endblock %} {% block content %}
+
+<div class="env-data-container">
+  <div class="header-section">
+    <div class="header-content">
+      <div class="header-info">
+        <h2><i class="fas fa-leaf"></i> Safety Indicator Data Entry</h2>
+
+        <div class="plant-info">
+          <span
+            ><strong>Currently Editing:</strong> {{ selected_plant.name }}</span
+          >
+          <span><strong>Year:</strong> {{ current_year }}</span>
+          <span><strong>Last Updated:</strong> {% now "F d, Y - H:i" %}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= -->
+  <!-- Plant & Waste Selector -->
+  <!-- ============================= -->
+  <div class="plant-selector-section">
+    <div class="row align-items-center">
+      <!-- Plant Selector -->
+      <div class="col-md-5">
+        <div class="plant-selector-container">
+          <label>
+            <i class="fas fa-building"></i>
+            <span>Select Plant:</span>
+          </label>
+
+          <select onchange="switchPlant(this.value)">
+            {% for plant in user_plants %}
+
+            <option value="{{ plant.id }}" {% if plant.id == selected_plant.id %}selected{% endif %}>
+                {{ plant.name }}
+            </option>
+
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Plant Count Badge -->
+      <div class="col-md-2 text-end">
+        <span class="plant-count-badge">
+          <i class="fas fa-check-circle"></i>
+          {{ user_plants.count }} plant(s)
+        </span>
+      </div>
+
+      <!-- Waste Type -->
+      <div class="col-md-5">
+        <div class="plant-selector-container">
+          <label>
+            <i class="fas fa-recycle"></i>
+            <span>Waste Type:</span>
+          </label>
+
+          <select id="wasteType" onchange="switchWasteType()">
+            <option value="LEADING_INDICATOR" 
+            {% if selected_type == "LEADING_INDICATOR" %}selected{% endif %}>
+              LEADING INDICATOR
+            </option>
+
+            <option
+              value="LAGGING_INDICATOR"
+              {% if selected_type == "LAGGING_INDICATOR" %}selected{% endif %}>
+              LAGGING INDICATOR
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================= -->
+  <!-- LEADING INDICATOR -->
+  <!-- ============================= -->
+
+  {% if selected_type == "LEADING_INDICATOR" %}
+  <div class="table-wrapper">
+    <table class="main-table" id="LeadingTable">
+      <thead>
+        <tr>
+          <th class="sticky-col">SL NO.</th>
+          <th class="sticky-col sticky-col-2">MONTH</th>
+          <th class="sticky-col sticky-col-3"></th>
+          <th class="sticky-col sticky-col-4"></th>
+
+          <th>2025</th>
+
+          <th>Jan-26</th>
+          <th>Feb-26</th>
+          <th>Mar-26</th>
+          <th>Apr-26</th>
+          <th>May-26</th>
+          <th>Jun-26</th>
+          <th>Jul-26</th>
+          <th>Aug-26</th>
+          <th>Sep-26</th>
+          <th>Oct-26</th>
+          <th>Nov-26</th>
+          <th>Dec-26</th>
+
+          <th>TOTAL</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for row in leading_indicator_rows %}
+
+        <tr data-row="{{ row.row_key }}">
+          {% comment %} <td class="sticky-col">{{ forloop.counter }}</td> {% endcomment %}
+           {% if row.category_rowspan %}
+            <td class="sticky-col" rowspan="{{ row.category_rowspan }}">
+                {{ row.sr_no }}
+            </td>
+            {% endif %}
+
+          {% if row.category_rowspan %}
+          <td class="sticky-col sticky-col-2" rowspan="{{ row.category_rowspan }}">
+            {{ row.category }}
+          </td>
+          {% endif %} 
+          {% if row.subcategory_rowspan %}
+            <td class="sticky-col sticky-col-3" rowspan="{{ row.subcategory_rowspan }}">
+                {{ row.subcategory }}
+            </td>
+          {% elif not row.subcategory %}
+            <td class="sticky-col sticky-col-3 empty-cell"></td>
+          {% endif %}
+
+          <td class="sticky-col sticky-col-4">{{ row.question }}</td>
+
+          {% with entry=data_map|get_item:row.row_key %}
+
+          <td>
+            <input
+              class="data-input year-2025"
+              value="{{ entry.year_2025|default:'' }}"
+            />
+          </td>
+
+          {% for m in months %}
+          <td>
+            <input
+              type="number"
+              class="data-input {{m}}"
+              value="{{ entry|get_month_value:m }}"
+            />
+          </td>
+          {% endfor %}
+
+          <td>
+            <input
+              class="data-input total-val"
+              readonly
+              value="{{ entry.total_quantity|default:'' }}"
+            />
+          </td>
+
+          {% endwith %}
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- ============================= -->
+  <!-- LAGGING INDICATOR -->
+  <!-- ============================= -->
+  {% if selected_type == "LAGGING_INDICATOR" %}
+  <div class="table-wrapper">
+    <table class="main-table" id="laggingTable">
+      <thead>
+        <tr>
+          <th class="sticky-col">SL NO.</th>
+          <th class="sticky-col sticky-col-2">MONTH</th>
+          <th class="sticky-col sticky-col-3"></th>
+          <th class="sticky-col sticky-col-4"></th>
+
+          <th>2025</th>
+
+          <th>Jan-26</th>
+          <th>Feb-26</th>
+          <th>Mar-26</th>
+          <th>Apr-26</th>
+          <th>May-26</th>
+          <th>Jun-26</th>
+          <th>Jul-26</th>
+          <th>Aug-26</th>
+          <th>Sep-26</th>
+          <th>Oct-26</th>
+          <th>Nov-26</th>
+          <th>Dec-26</th>
+
+          <th>TOTAL</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for row in lagging_indicator_rows %}
+
+        <tr data-row="{{ row.row_key }}">
+          {% comment %} <td class="sticky-col">{{ forloop.counter }}</td> {% endcomment %}
+           {% if row.category_rowspan %}
+            <td class="sticky-col" rowspan="{{ row.category_rowspan }}">
+                {{ row.sr_no }}
+            </td>
+            {% endif %}
+
+          {% if row.category_rowspan %}
+          <td
+            class="sticky-col sticky-col-2"
+            rowspan="{{ row.category_rowspan }}"
+          >
+            {{ row.category }}
+          </td>
+          {% endif %} {% if row.subcategory_rowspan %}
+          <td
+            class="sticky-col sticky-col-3"
+            rowspan="{{ row.subcategory_rowspan }}"
+          >
+            {{ row.subcategory }}
+          </td>
+          {% elif not row.subcategory %}
+          <td class="sticky-col sticky-col-3 empty-cell"></td>
+          {% endif %}
+
+          <td class="sticky-col sticky-col-4">{{ row.question }}</td>
+
+          {% with entry=data_map|get_item:row.row_key %}
+
+          <td>
+            <input
+              class="data-input year-2025"
+              value="{{ entry.year_2025|default:'' }}"
+            />
+          </td>
+
+          {% for m in months %}
+          <td>
+            <input
+              type="number"
+              class="data-input {{m}}"
+              value="{{ entry|get_month_value:m }}"
+            />
+          </td>
+          {% endfor %}
+
+          <td>
+            <input
+              class="data-input total-val"
+              readonly
+              value="{{ entry.total_quantity|default:'' }}"
+            />
+          </td>
+
+          {% endwith %}
+        </tr>
+
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  
+
+  <div style="margin-top: 20px; text-align: right">
+    <button id="generateDemoDataBtn" class="btn btn-warning">
+      <i class="fas fa-random"></i> Generate Demo Data
+    </button>
+    <button id="downloadEnvExcel" class="btn btn-success">
+        <i class="fas fa-file-excel"></i> Download Excel
+    </button>
+    <button id="saveDataBtn" class="btn btn-primary">
+      <i class="fas fa-save"></i> Save Report
+    </button>
+  </div>
+</div>
+<script>
+    const months = [
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+    ];
+
+    let isDataChanged = false;
+
+    /* Detect Changes */
+
+    document.addEventListener("input", function (e) {
+        if (e.target.classList.contains("data-input")) {
+        isDataChanged = true;
+        }
+    });
+
+    /* Plant Switch */
+
+    function switchPlant(plantId) {
+        if (isDataChanged) {
+        if (!confirm("Switch plant? Unsaved data will be lost.")) return;
+        }
+
+        const type = document.getElementById("wasteType").value;
+
+        let url = new URL(window.location.href);
+
+        url.searchParams.set("plant_id", plantId);
+        url.searchParams.set("type", type);
+
+        window.location.href = url.toString();
+    }
+
+    /* Waste Type Switch */
+
+
+    function switchWasteType() {
+
+        const type = document.getElementById("wasteType").value;
+
+        let url = new URL(window.location.href);
+
+        url.searchParams.set("plant_id", "{{ selected_plant.id }}");
+        url.searchParams.set("type", type);
+
+        window.location.href = url.toString();
+
+    }
+
+    /* Leading Indicator Employee Training */
+
+
+    function calculateTempEmployeeTraining() {
+
+        const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+        let totalTraining = 0;
+        let totalEmployees = 0;
+
+        months.forEach(month => {
+
+            const training = parseFloat(
+            document.querySelector(`[data-row="3days_tranings_reporting_month"] .${month}`)?.value
+            ) || 0;
+
+            const employees = parseFloat(
+            document.querySelector(`[data-row="total_no_of_temp_employees"] .${month}`)?.value
+            ) || 0;
+
+            let result = 0;
+
+            if (employees > 0) {
+            result = (training / employees) * 100;
+            }
+
+            const field = document.querySelector(
+            `[data-row="temp_employee_3days_training"] .${month}`
+            );
+
+            if (field) field.value = result.toFixed(2);
+
+            totalTraining += training;
+            totalEmployees += employees;
+
+        });
+
+        /* TOTAL COLUMN CALCULATION */
+
+        let totalResult = 0;
+
+        if (totalEmployees > 0) {
+            totalResult = (totalTraining / totalEmployees) * 100;
+        }
+
+        const totalField = document.querySelector(
+            `[data-row="temp_employee_3days_training"] .total-val`
+        );
+
+        if (totalField) {
+            totalField.value = totalResult.toFixed(2);
+        }
+
+        /* 2025 COLUMN */
+
+        const training2025 = parseFloat(
+            document.querySelector(`[data-row="3days_tranings_reporting_month"] .year-2025`)?.value
+        ) || 0;
+
+        const employees2025 = parseFloat(
+            document.querySelector(`[data-row="total_no_of_temp_employees"] .year-2025`)?.value
+        ) || 0;
+
+        let result2025 = 0;
+
+        if (employees2025 > 0) {
+            result2025 = (training2025 / employees2025) * 100;
+        }
+
+        const yearField = document.querySelector(
+            `[data-row="temp_employee_3days_training"] .year-2025`
+        );
+
+        if (yearField) {
+            yearField.value = result2025.toFixed(2);
+        }
+
+    }
+
+    /* Lagging Indicator Compliance % */
+
+    function calculateCapaCompliance() {
+
+        const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+        let totalCompleted = 0;
+        let totalAssigned = 0;
+
+        months.forEach(month => {
+
+            const completed = parseFloat(
+            document.querySelector(`[data-row="no_of_actions_completed_ytd_cumulative_till_reporting_month"] .${month}`)?.value
+            ) || 0;
+
+            const assigned = parseFloat(
+            document.querySelector(`[data-row="no_of_actions_generated_ytd_cumulative_till_reporting_month"] .${month}`)?.value
+            ) || 0;
+
+            let result = 0;
+
+            if (assigned > 0) {
+            result = (completed / assigned) * 100;
+            }
+
+            const field = document.querySelector(
+            `[data-row="capa_compliance_percentage"] .${month}`
+            );
+
+            if (field) field.value = result.toFixed(2);
+
+            totalCompleted += completed;
+            totalAssigned += assigned;
+
+        });
+
+        /* TOTAL COLUMN */
+
+        let totalResult = 0;
+
+        if (totalAssigned > 0) {
+            totalResult = (totalCompleted / totalAssigned) * 100;
+        }
+
+        const totalField = document.querySelector(
+            `[data-row="capa_compliance_percentage"] .total-val`
+        );
+
+        if (totalField) {
+            totalField.value = totalResult.toFixed(2);
+        }
+
+        /* 2025 COLUMN */
+
+        const completed2025 = parseFloat(
+            document.querySelector(`[data-row="no_of_actions_completed_ytd_cumulative_till_reporting_month"] .year-2025`)?.value
+        ) || 0;
+
+        const assigned2025 = parseFloat(
+            document.querySelector(`[data-row="no_of_actions_generated_ytd_cumulative_till_reporting_month"] .year-2025`)?.value
+        ) || 0;
+
+        let result2025 = 0;
+
+        if (assigned2025 > 0) {
+            result2025 = (completed2025 / assigned2025) * 100;
+        }
+
+        const yearField = document.querySelector(
+            `[data-row="capa_compliance_percentage"] .year-2025`
+        );
+
+        if (yearField) {
+            yearField.value = result2025.toFixed(2);
+        }
+
+    }
+
+    /* Lagging Indicator investing pending */
+
+    function calculateInvestigationPendingAverage() {
+
+        const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+        let sum = 0;
+        let count = 0;
+
+        months.forEach(month => {
+
+            const val = parseFloat(
+            document.querySelector(`[data-row="total_no_of_investigation_pending_cumulative_till_reporting_month"] .${month}`)?.value
+            ) || 0;
+
+            sum += val;
+            count++;
+
+        });
+
+        const avg = count > 0 ? (sum / count) : 0;
+
+        const totalField = document.querySelector(
+            `[data-row="total_no_of_investigation_pending_cumulative_till_reporting_month"] .total-val`
+        );
+
+        if (totalField) {
+            totalField.value = avg.toFixed(2);
+        }
+
+    }
+
+
+    /* Total non injury incidents*/
+
+    function calculateTotalNonInjuryIncidents() {
+
+        const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+        let total = 0;
+
+        months.forEach(month => {
+
+            const minor = parseFloat(
+            document.querySelector(`[data-row="minor_fire"] .${month}`)?.value
+            ) || 0;
+
+            const major = parseFloat(
+            document.querySelector(`[data-row="major_fire"] .${month}`)?.value
+            ) || 0;
+
+            const property = parseFloat(
+            document.querySelector(`[data-row="property_damage_fire"] .${month}`)?.value
+            ) || 0;
+
+            const spill = parseFloat(
+            document.querySelector(`[data-row="major_spill"] .${month}`)?.value
+            ) || 0;
+
+            const result = minor + major + property + spill;
+
+            const field = document.querySelector(
+            `[data-row="total_non_injury_incidents"] .${month}`
+            );
+
+            if (field) field.value = result;
+
+            total += result;
+
+        });
+
+        /* TOTAL COLUMN (ONLY JAN–DEC) */
+
+        const totalField = document.querySelector(
+            `[data-row="total_non_injury_incidents"] .total-val`
+        );
+
+        if (totalField) {
+            totalField.value = total;
+        }
+
+        /* 2025 COLUMN */
+
+        const minor2025 = parseFloat(
+            document.querySelector(`[data-row="minor_fire"] .year-2025`)?.value
+        ) || 0;
+
+        const major2025 = parseFloat(
+            document.querySelector(`[data-row="major_fire"] .year-2025`)?.value
+        ) || 0;
+
+        const property2025 = parseFloat(
+            document.querySelector(`[data-row="property_damage_fire"] .year-2025`)?.value
+        ) || 0;
+
+        const spill2025 = parseFloat(
+            document.querySelector(`[data-row="major_spill"] .year-2025`)?.value
+        ) || 0;
+
+        const result2025 = minor2025 + major2025 + property2025 + spill2025;
+
+        const yearField = document.querySelector(
+            `[data-row="total_non_injury_incidents"] .year-2025`
+        );
+
+        if (yearField) {
+            yearField.value = result2025;
+        }
+
+    }
+
+
+    function calculateIncidentRates() {
+
+        const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+        let totalTRC = 0;
+        let totalLTI = 0;
+        let totalManhours = 0;
+
+        months.forEach(month => {
+
+            const trc = parseFloat(
+            document.querySelector(`[data-row="total_recorable_cases_trc"] .${month}`)?.value
+            ) || 0;
+
+            const lti = parseFloat(
+            document.querySelector(`[data-row="lost_time_incident"] .${month}`)?.value
+            ) || 0;
+
+            const manhours = parseFloat(
+            document.querySelector(`[data-row="total_manhours"] .${month}`)?.value
+            ) || 0;
+
+            let trcRate = 0;
+            let ltirRate = 0;
+
+            if (manhours > 0) {
+            trcRate = (trc * 200000) / manhours;
+            ltirRate = (lti * 200000) / manhours;
+            }
+
+            const trcField = document.querySelector(
+            `[data-row="trc_fr_total_recorable_cases_frequency_rate"] .${month}`
+            );
+
+            const ltirField = document.querySelector(
+            `[data-row="ltir_incident_rate"] .${month}`
+            );
+
+            if (trcField) trcField.value = trcRate.toFixed(2);
+            if (ltirField) ltirField.value = ltirRate.toFixed(2);
+
+            totalTRC += trc;
+            totalLTI += lti;
+            totalManhours += manhours;
+
+        });
+
+        /* TOTAL COLUMN */
+
+        let totalTRCRate = 0;
+        let totalLTIRRate = 0;
+
+        if (totalManhours > 0) {
+            totalTRCRate = (totalTRC * 200000) / totalManhours;
+            totalLTIRRate = (totalLTI * 200000) / totalManhours;
+        }
+
+        const trcTotalField = document.querySelector(
+            `[data-row="trc_fr_total_recorable_cases_frequency_rate"] .total-val`
+        );
+
+        const ltirTotalField = document.querySelector(
+            `[data-row="ltir_incident_rate"] .total-val`
+        );
+
+        if (trcTotalField) trcTotalField.value = totalTRCRate.toFixed(2);
+        if (ltirTotalField) ltirTotalField.value = totalLTIRRate.toFixed(2);
+
+        /* 2025 COLUMN */
+
+        const trc2025 = parseFloat(
+            document.querySelector(`[data-row="total_recorable_cases_trc"] .year-2025`)?.value
+        ) || 0;
+
+        const lti2025 = parseFloat(
+            document.querySelector(`[data-row="lost_time_incident"] .year-2025`)?.value
+        ) || 0;
+
+        const manhours2025 = parseFloat(
+            document.querySelector(`[data-row="total_manhours"] .year-2025`)?.value
+        ) || 0;
+
+        let trcRate2025 = 0;
+        let ltirRate2025 = 0;
+
+        if (manhours2025 > 0) {
+            trcRate2025 = (trc2025 * 200000) / manhours2025;
+            ltirRate2025 = (lti2025 * 200000) / manhours2025;
+        }
+
+        const trcYearField = document.querySelector(
+            `[data-row="trc_fr_total_recorable_cases_frequency_rate"] .year-2025`
+        );
+
+        const ltirYearField = document.querySelector(
+            `[data-row="ltir_incident_rate"] .year-2025`
+        );
+
+        if (trcYearField) trcYearField.value = trcRate2025.toFixed(2);
+        if (ltirYearField) ltirYearField.value = ltirRate2025.toFixed(2);
+
+    }
+
+    function calculateHeadCountAverages() {
+
+        const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+
+        const rows = [
+            "total_head_count",
+            "head_count_staff_operator",
+            "contingent_temps_head_count"
+        ];
+
+        rows.forEach(rowKey => {
+
+            let sum = 0;
+            let count = 0;
+
+            months.forEach(month => {
+
+            const val = parseFloat(
+                document.querySelector(`[data-row="${rowKey}"] .${month}`)?.value
+            ) || 0;
+
+            sum += val;
+            count++;
+
+            });
+
+            const avg = count > 0 ? (sum / count) : 0;
+
+            const totalField = document.querySelector(
+            `[data-row="${rowKey}"] .total-val`
+            );
+
+            if (totalField) {
+            totalField.value = avg.toFixed(2);
+            }
+
+        });
+
+    }
+
+
+    /* Row Total */
+
+    function calculateRowTotal(row) {
+        let total = 0;
+
+        months.forEach((month) => {
+        const val = parseFloat(row.querySelector(`.${month}`)?.value) || 0;
+
+        total += val;
+        });
+
+        const totalField = row.querySelector(".total-val");
+
+        if (totalField) {
+        totalField.value = total.toFixed(2);
+        }
+    }
+
+    /* Input Event */
+
+    document.addEventListener("input", function (e) {
+        if (!e.target.classList.contains("data-input")) return;
+
+        const row = e.target.closest("tr");
+
+        if (row) calculateRowTotal(row);
+        calculateTempEmployeeTraining();
+        calculateCapaCompliance();
+        calculateInvestigationPendingAverage();
+        calculateTotalNonInjuryIncidents();
+        calculateIncidentRates();
+        calculateHeadCountAverages();
+    });
+
+    /* Page Load */
+
+    document.addEventListener("DOMContentLoaded", function () {
+        document.querySelectorAll("tbody tr").forEach((row) => {
+        calculateRowTotal(row);
+        });
+        calculateTempEmployeeTraining();
+        calculateCapaCompliance();
+        calculateInvestigationPendingAverage();
+        calculateTotalNonInjuryIncidents();
+        calculateIncidentRates();
+        calculateHeadCountAverages();
+    });
+
+  /* Helper */
+
+  function num(v) {
+    return parseFloat(v) || 0;
+  }
+
+  /* Collect Data */
+
+  function collectSafetyData() {
+    const rows = document.querySelectorAll("tbody tr");
+
+    const months = [
+      "jan",
+      "feb",
+      "mar",
+      "apr",
+      "may",
+      "jun",
+      "jul",
+      "aug",
+      "sep",
+      "oct",
+      "nov",
+      "dec",
+    ];
+
+    const payload = [];
+
+    rows.forEach((row) => {
+      const rowName = row.dataset.row;
+
+      if (!rowName) return;
+
+      const data = {
+        row_name: rowName,
+
+        year_2025: num(row.querySelector(".year-2025")?.value),
+
+        jan_qty: num(row.querySelector(".jan")?.value),
+        feb_qty: num(row.querySelector(".feb")?.value),
+        mar_qty: num(row.querySelector(".mar")?.value),
+
+        apr_qty: num(row.querySelector(".apr")?.value),
+        may_qty: num(row.querySelector(".may")?.value),
+        jun_qty: num(row.querySelector(".jun")?.value),
+
+        jul_qty: num(row.querySelector(".jul")?.value),
+        aug_qty: num(row.querySelector(".aug")?.value),
+        sep_qty: num(row.querySelector(".sep")?.value),
+
+        oct_qty: num(row.querySelector(".oct")?.value),
+        nov_qty: num(row.querySelector(".nov")?.value),
+        dec_qty: num(row.querySelector(".dec")?.value),
+
+        total_quantity: num(row.querySelector(".total-val")?.value),
+      };
+
+      payload.push(data);
+    });
+
+    return payload;
+  }
+
+  /* Save */
+
+  function saveSafetyReport() {
+    const rows = collectSafetyData();
+
+    const type = document.getElementById("wasteType").value;
+
+    fetch("{% url 'environmental_mis:save_safety_indicator' %}", {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": "{{ csrf_token }}",
+      },
+
+      body: JSON.stringify({
+        plant_id: "{{selected_plant.id}}",
+        year: "{{current_year}}",
+        report_type: type,
+        rows: rows,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") {
+          alert("Safety Indicator saved successfully");
+
+          isDataChanged = false;
+        }
+      });
+  }
+
+  document
+    .getElementById("saveDataBtn")
+    .addEventListener("click", saveSafetyReport); 
+</script>
+
+<script>
+    /* ================= RANDOM DATA GENERATOR ================= */
+
+    document
+    .getElementById("generateDemoDataBtn")
+    .addEventListener("click", function () {
+
+        const rows = document.querySelectorAll("tbody tr");
+
+        rows.forEach((row) => {
+
+        const rowKey = row.dataset.row;
+        if (!rowKey) return;
+
+        /* ===== YEAR ===== */
+
+        const yearField = row.querySelector(".year-2025");
+
+        if (yearField && !yearField.hasAttribute("readonly")) {
+            yearField.value = Math.floor(Math.random() * 50) + 1;
+        }
+
+        /* ===== MONTHS ===== */
+
+        months.forEach((month) => {
+
+            const input = row.querySelector(`.${month}`);
+
+            if (input && !input.hasAttribute("readonly")) {
+
+            let value = Math.floor(Math.random() * 20);
+
+            input.value = value;
+
+            }
+
+        });
+
+        });
+
+        /* ===== RUN ALL CALCULATIONS ===== */
+
+        document.querySelectorAll("tbody tr").forEach((row) => {
+        calculateRowTotal(row);
+        });
+
+        /* KPI CALCULATIONS */
+
+        calculateTempEmployeeTraining();
+        calculateCapaCompliance();
+        calculateInvestigationPendingAverage();
+        calculateTotalNonInjuryIncidents();
+        calculateIncidentRates();
+        calculateHeadCountAverages();
+
+    });
+</script>
+
+<script>
+    document
+    .getElementById("downloadEnvExcel")
+    .addEventListener("click", function(){
+
+        if(isDataChanged){
+            if(!confirm("Data is not saved and may not reflect in Excel. Proceed?")){
+                return;
+            }
+        }
+
+        let plantId = "{{selected_plant.id}}";
+        let type = document.getElementById("wasteType").value;
+
+        let url = `/environmental_mis/download-safety-excel/?plant_id=${plantId}&type=${type}`;
+
+        window.location.href = url;
+
+    });
+</script>
+
+{% endblock %}

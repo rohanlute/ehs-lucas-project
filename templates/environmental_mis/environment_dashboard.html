@@ -1,543 +1,503 @@
-{% extends "base/base.html" %}
-{% load static %}
-
-{% block title %}Environmental Analytics Dashboard{% endblock %}
-
-{% block extra_css %}
+{% extends "base/base.html" %} {% load static %}
+{% block title %}Environmental 
+Dashboard{% endblock %} {% block extra_css %}
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
 
 <style>
+  .dashboard-card {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+    margin-bottom: 20px;
+  }
 
-.dashboard-card{
-background:white;
-border-radius:10px;
-padding:20px;
-box-shadow:0 4px 10px rgba(0,0,0,.06);
-margin-bottom:20px;
-}
+  .chart-box {
+    height: 320px;
+    width: 100%;
+  }
 
-.chart-box{
-height:320px;
-width:100%;
-}
+  /* Plant Selector */
 
-/* Plant Selector */
+  .plant-selector-section {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
 
-.plant-selector-section{
-background:linear-gradient(135deg,#2563eb,#1e40af);
-border-radius:10px;
-padding:1.5rem;
-margin-bottom:1.5rem;
-}
+  .plant-selector-container {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
 
-.plant-selector-container{
-display:flex;
-align-items:center;
-gap:1rem;
-flex-wrap:wrap;
-}
+  .plant-selector-container label {
+    font-weight: 600;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+  }
 
-.plant-selector-container label{
-font-weight:600;
-color:#fff;
-display:flex;
-align-items:center;
-gap:0.5rem;
-font-size:.95rem;
-}
+  .plant-selector-container select {
+    flex: 1;
+    min-width: 250px;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: white;
+    cursor: pointer;
+  }
 
-.plant-selector-container select{
-flex:1;
-min-width:250px;
-padding:0.75rem 1rem;
-border:2px solid #e2e8f0;
-border-radius:6px;
-font-size:.95rem;
-background:white;
-cursor:pointer;
-}
+  .plant-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
 
-.plant-count-badge{
-display:inline-flex;
-align-items:center;
-gap:0.5rem;
-padding:0.5rem 1rem;
-background:linear-gradient(135deg,#10b981,#059669);
-color:white;
-border-radius:6px;
-font-size:.875rem;
-font-weight:600;
-}
+  .content-header {
+    display: none;
+  }
 
+  .add-waste-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transition: all 0.25s ease;
+  }
+
+  .add-waste-btn i {
+    font-size: 14px;
+  }
+
+  .add-waste-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #059669, #047857);
+  }
 </style>
 
-{% endblock %}
-
-{% block content %}
+{% endblock %} {% block content %}
 
 <div class="container-fluid">
-
-<h3 class="mb-4">Environmental Analytics Dashboard</h3>
-
-<!-- FILTER -->
-
-<div class="plant-selector-section">
-
-<div class="row align-items-center">
-
-<div class="col-md-5">
-
-<div class="plant-selector-container">
-
-<label>
-<i class="fas fa-building"></i>
-<span>Select Plant:</span>
-</label>
-
-<select id="plantSelect">
-
-{% for plant in user_plants %}
-
-<option value="{{ plant.id }}"
-{% if selected_plant and plant.id == selected_plant.id %}selected{% endif %}>
-{{ plant.name }}
-</option>
-{% endfor %}
-
-</select>
-
-</div>
-
-</div>
-
-<div class="col-md-2 text-end">
-
-<span class="plant-count-badge">
-<i class="fas fa-check-circle"></i>
-{{ user_plants.count }} plant(s)
-</span>
-
-</div>
-
-<div class="col-md-5">
-
-<div class="plant-selector-container">
-
-<label>
-<i class="fas fa-recycle"></i>
-<span>Waste Type:</span>
-</label>
-
-<select id="wasteType">
-
-<option value="MANUFACTURING"
-{% if selected_type == "MANUFACTURING" %}selected{% endif %}>
-Manufacturing Environment
-</option>
-
-<option value="NON_MANUFACTURING"
-{% if selected_type == "NON_MANUFACTURING" %}selected{% endif %}>
-Non Manufacturing Environment
-</option>
-
-</select>
-
-</div>
-
-</div>
-
-</div>
-
-</div>
-
-<!-- KPI -->
-
-<div class="row">
-
-<div class="col-md-4">
-<div class="dashboard-card">
-<h6>Total Water Intake</h6>
-<h3>{{ kpi_water|floatformat:2 }}</h3>
-</div>
-</div>
-
-<div class="col-md-4">
-<div class="dashboard-card">
-<h6>Total Energy Consumption</h6>
-<h3>{{ kpi_energy|floatformat:2 }}</h3>
-</div>
-</div>
-
-<div class="col-md-4">
-<div class="dashboard-card">
-<h6>Energy Cost</h6>
-<h3>{{ kpi_cost|floatformat:2 }}</h3>
-</div>
-</div>
-
-</div>
-
-<!-- WATER + ENERGY TREND -->
-
-<div class="row">
-
-<div class="col-md-6">
-<div class="dashboard-card">
-<h6>Water Consumption Trend</h6>
-<div id="waterChart" class="chart-box"></div>
-</div>
-</div>
-
-<div class="col-md-6">
-<div class="dashboard-card">
-<h6>Energy Consumption Trend</h6>
-<div id="energyChart" class="chart-box"></div>
-</div>
-</div>
-
-</div>
-
-<!-- ENERGY SOURCE + COST -->
-
-{% if selected_type == "MANUFACTURING" %}
-
-<div class="row">
-
-<div class="col-md-6">
-<div class="dashboard-card">
-<h6>Energy Source Distribution</h6>
-<div id="energySourceChart" class="chart-box"></div>
-</div>
-</div>
-
-<div class="col-md-6">
-<div class="dashboard-card">
-<h6>Water vs Energy Cost</h6>
-<div id="costChart" class="chart-box"></div>
-</div>
-</div>
-
-</div>
-
-{% else %}
-
-<div class="row">
-
-<div class="col-md-12">
-<div class="dashboard-card">
-<h6>Water vs Energy Cost</h6>
-<div id="costChart" class="chart-box"></div>
-</div>
-</div>
-
-</div>
-
-{% endif %}
-
-<!-- COD / BOD -->
-
-{% if selected_type == "MANUFACTURING" %}
-
-<div class="row">
-
-<div class="col-md-6">
-<div class="dashboard-card">
-<h6>COD Treatment</h6>
-<div id="codChart" class="chart-box"></div>
-</div>
-</div>
-
-<div class="col-md-6">
-<div class="dashboard-card">
-<h6>BOD Treatment</h6>
-<div id="bodChart" class="chart-box"></div>
-</div>
-</div>
-
-</div>
-
-{% endif %}
-
-
-<!-- PLANT COMPARISON -->
-
-<div class="row">
-
-<div class="col-md-12">
-<div class="dashboard-card">
-<h6>Plant Water & Energy Consumption</h6>
-<div id="plantChart" class="chart-box"></div>
-</div>
-</div>
-
-</div>
-
-<!-- MONTHLY COMPARISON -->
-
-<div class="row">
-
-<div class="col-md-12">
-<div class="dashboard-card">
-<h6>Monthly Water vs Energy Comparison</h6>
-<div id="waterEnergyChart" class="chart-box"></div>
-</div>
-</div>
-
-</div>
-
+  <div class="d-flex justify-content-between align-items-center mt-2">
+    <h3 class="m-0">Enviornment Analytics Dashboard</h3>
+
+    <a
+      href="{% url 'environmental_mis:environment_report' %}"
+      class="add-waste-btn"
+    >
+      <i class="fas fa-plus-circle"></i>
+      Add Enviornment Entry
+    </a>
+  </div>
+  <!-- FILTER -->
+
+  <div class="plant-selector-section mt-3">
+    <div class="row align-items-center">
+      <div class="col-md-5">
+        <div class="plant-selector-container">
+          <label>
+            <i class="fas fa-building"></i>
+            <span>Select Plant:</span>
+          </label>
+
+          <select id="plantSelect">
+            {% for plant in user_plants %}
+
+            <option value="{{ plant.id }}"
+              {% if plant.id == selected_plant.id %}selected{% endif %}>
+              {{ plant.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="col-md-2 text-end">
+        <span class="plant-count-badge">
+          <i class="fas fa-check-circle"></i>
+          {{ user_plants.count }} plant(s)
+        </span>
+      </div>
+
+      <div class="col-md-5">
+        <div class="plant-selector-container">
+          <label>
+            <i class="fas fa-recycle"></i>
+            <span>Waste Type:</span>
+          </label>
+
+          <select id="wasteType">
+            <option
+              value="MANUFACTURING"
+              {% if selected_type == "MANUFACTURING" %}selected{% endif %}>
+              Manufacturing Environment
+            </option>
+
+            <option
+              value="NON_MANUFACTURING" 
+              {% if selected_type == "NON_MANUFACTURING" %}selected{% endif %}>
+              Non Manufacturing Environment
+            </option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI -->
+
+  <div class="row">
+    <div class="col-md-4">
+      <div class="dashboard-card">
+        <h6>Total Water Intake</h6>
+        <h3>{{ kpi_water|floatformat:2 }}</h3>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="dashboard-card">
+        <h6>Total Energy Consumption</h6>
+        <h3>{{ kpi_energy|floatformat:2 }}</h3>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="dashboard-card">
+        <h6>Energy Cost</h6>
+        <h3>{{ kpi_cost|floatformat:2 }}</h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- WATER + ENERGY TREND -->
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>Water Consumption Trend</h6>
+        <div id="waterChart" class="chart-box"></div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>Energy Consumption Trend</h6>
+        <div id="energyChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENERGY SOURCE + COST -->
+
+  {% if selected_type == "MANUFACTURING" %}
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>Energy Source Distribution</h6>
+        <div id="energySourceChart" class="chart-box"></div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>Water vs Energy Cost</h6>
+        <div id="costChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="dashboard-card">
+        <h6>Water vs Energy Cost</h6>
+        <div id="costChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+
+  <!-- COD / BOD -->
+
+  {% if selected_type == "MANUFACTURING" %}
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>COD Treatment</h6>
+        <div id="codChart" class="chart-box"></div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="dashboard-card">
+        <h6>BOD Treatment</h6>
+        <div id="bodChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  {% endif %}
+
+  <!-- PLANT COMPARISON -->
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="dashboard-card">
+        <h6>Plant Water & Energy Consumption</h6>
+        <div id="plantChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONTHLY COMPARISON -->
+
+  <div class="row">
+    <div class="col-md-12">
+      <div class="dashboard-card">
+        <h6>Monthly Water vs Energy Comparison</h6>
+        <div id="waterEnergyChart" class="chart-box"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- DATA -->
 
-{{ months|json_script:"months-data" }}
-{{ water_monthly|json_script:"water-data" }}
-{{ energy_monthly|json_script:"energy-data" }}
-{{ cost_data|json_script:"cost-data" }}
-
-{{ energy_sources|json_script:"energy-source-data" }}
-{{ inlet_cod|json_script:"cod-inlet-data" }}
-{{ treated_cod|json_script:"cod-treated-data" }}
-{{ inlet_bod|json_script:"bod-inlet-data" }}
-{{ treated_bod|json_script:"bod-treated-data" }}
-
-{{ plant_labels|json_script:"plant-labels" }}
-{{ plant_energy|json_script:"plant-energy" }}
+{{ months|json_script:"months-data" }} 
+{{ water_monthly|json_script:"water-data"}} 
+{{ energy_monthly|json_script:"energy-data" }} 
+{{ cost_data|json_script:"cost-data" }} 
+{{ energy_sources|json_script:"energy-source-data" }} 
+{{ inlet_cod|json_script:"cod-inlet-data" }} 
+{{ treated_cod|json_script:"cod-treated-data" }} 
+{{ inlet_bod|json_script:"bod-inlet-data" }} 
+{{ treated_bod|json_script:"bod-treated-data" }} 
+{{ plant_labels|json_script:"plant-labels" }} 
+{{ plant_energy|json_script:"plant-energy" }} 
 {{ plant_water|json_script:"plant-water" }}
 
 <script>
-
-document.addEventListener("DOMContentLoaded", function(){
-
-const months = JSON.parse(document.getElementById("months-data").textContent)
-
-const waterData = JSON.parse(document.getElementById("water-data").textContent)
-const energyData = JSON.parse(document.getElementById("energy-data").textContent)
-const costData = JSON.parse(document.getElementById("cost-data").textContent)
-
-const energySources = JSON.parse(document.getElementById("energy-source-data").textContent)
-
-const inletCOD = JSON.parse(document.getElementById("cod-inlet-data").textContent)
-const treatedCOD = JSON.parse(document.getElementById("cod-treated-data").textContent)
-
-const inletBOD = JSON.parse(document.getElementById("bod-inlet-data").textContent)
-const treatedBOD = JSON.parse(document.getElementById("bod-treated-data").textContent)
-
-const plantLabels = JSON.parse(document.getElementById("plant-labels").textContent)
-const plantEnergy = JSON.parse(document.getElementById("plant-energy").textContent)
-const plantWater = JSON.parse(document.getElementById("plant-water").textContent)
-
-
-
-function formatValue(v){
-return Number(v).toFixed(2)
-}
-
-
-
-/* WATER TREND */
-
-echarts.init(document.getElementById("waterChart")).setOption({
-
-tooltip:{trigger:'axis'},
-
-xAxis:{type:'category',data:months},
-
-yAxis:{type:'value'},
-
-series:[{
-type:'line',
-data:waterData,
-smooth:true,
-areaStyle:{},
-itemStyle:{color:'#2563eb'}
-}]
-
-})
-
-
-
-/* ENERGY TREND */
-
-echarts.init(document.getElementById("energyChart")).setOption({
-
-tooltip:{trigger:'axis'},
-
-xAxis:{type:'category',data:months},
-
-yAxis:{type:'value'},
-
-series:[{
-type:'line',
-data:energyData,
-smooth:true,
-areaStyle:{},
-itemStyle:{color:'#f97316'}
-}]
-
-})
-
-
-
-/* ENERGY SOURCE PIE */
-
-if(document.getElementById("energySourceChart")){
-
-echarts.init(document.getElementById("energySourceChart")).setOption({
-
-tooltip:{trigger:'item'},
-
-series:[{
-type:'pie',
-radius:['40%','70%'],
-data:[
-{value:energySources[0],name:'Diesel Mobile'},
-{value:energySources[1],name:'Diesel Stationary'},
-{value:energySources[2],name:'Electricity'},
-{value:energySources[3],name:'Natural Gas'},
-{value:energySources[4],name:'Solar'}
-]
-}]
-
-})
-
-}
-
-
-
-/* COST */
-
-echarts.init(document.getElementById("costChart")).setOption({
-
-tooltip:{trigger:'axis'},
-
-xAxis:{type:'category',data:['Water Cost','Energy Cost']},
-
-yAxis:{type:'value'},
-
-series:[{
-type:'bar',
-data:[
-{value:costData[0],itemStyle:{color:'#2563eb'}},
-{value:costData[1],itemStyle:{color:'#f97316'}}
-]
-}]
-
-})
-
-
-
-/* COD */
-
-if(document.getElementById("codChart")){
-
-echarts.init(document.getElementById("codChart")).setOption({
-
-legend:{data:['Inlet COD','Treated COD']},
-
-tooltip:{trigger:'axis'},
-
-xAxis:{type:'category',data:months},
-
-yAxis:{type:'value'},
-
-series:[
-{name:'Inlet COD',type:'line',data:inletCOD},
-{name:'Treated COD',type:'line',data:treatedCOD}
-]
-
-})
-
-}
-
-
-
-/* BOD */
-
-if(document.getElementById("bodChart")){
-
-echarts.init(document.getElementById("bodChart")).setOption({
-
-legend:{data:['Inlet BOD','Treated BOD']},
-
-tooltip:{trigger:'axis'},
-
-xAxis:{type:'category',data:months},
-
-yAxis:{type:'value'},
-
-series:[
-{name:'Inlet BOD',type:'line',data:inletBOD},
-{name:'Treated BOD',type:'line',data:treatedBOD}
-]
-
-})
-
-}
-
-
-
-/* PLANT CHART */
-
-echarts.init(document.getElementById("plantChart")).setOption({
-
-tooltip:{trigger:'axis'},
-
-legend:{data:['Water','Energy']},
-
-xAxis:{type:'category',data:plantLabels},
-
-yAxis:{type:'value'},
-
-series:[
-{name:'Water',type:'bar',data:plantWater,itemStyle:{color:'#2563eb'}},
-{name:'Energy',type:'bar',data:plantEnergy,itemStyle:{color:'#f97316'}}
-]
-
-})
-
-
-
-/* MONTHLY COMPARISON */
-
-echarts.init(document.getElementById("waterEnergyChart")).setOption({
-
-tooltip:{trigger:'axis'},
-
-legend:{data:['Water','Energy']},
-
-xAxis:{type:'category',data:months},
-
-yAxis:{type:'value'},
-
-series:[
-{name:'Water',type:'line',data:waterData,smooth:true,itemStyle:{color:'#2563eb'}},
-{name:'Energy',type:'line',data:energyData,smooth:true,itemStyle:{color:'#f97316'}}
-]
-
-})
-
-
-
-document.getElementById("plantSelect").addEventListener("change",updateDashboard)
-document.getElementById("wasteType").addEventListener("change",updateDashboard)
-
-function updateDashboard(){
-
-let plant=document.getElementById("plantSelect").value
-let type=document.getElementById("wasteType").value
-
-let url=new URL(window.location.href)
-
-url.searchParams.set("plant_id",plant)
-url.searchParams.set("type",type)
-
-window.location.href=url.toString()
-
-}
-
-})
-
+document.addEventListener("DOMContentLoaded", function () {
+
+  /* ---------- SAFE JSON READER ---------- */
+
+  function getJson(id){
+    const el = document.getElementById(id);
+    if(!el) return [];
+    try{
+      return JSON.parse(el.textContent);
+    }catch(e){
+      return [];
+    }
+  }
+
+  const months = getJson("months-data");
+  const waterData = getJson("water-data");
+  const energyData = getJson("energy-data");
+  const costData = getJson("cost-data");
+  const energySources = getJson("energy-source-data");
+  const inletCOD = getJson("cod-inlet-data");
+  const treatedCOD = getJson("cod-treated-data");
+  const inletBOD = getJson("bod-inlet-data");
+  const treatedBOD = getJson("bod-treated-data");
+  const plantLabels = getJson("plant-labels");
+  const plantEnergy = getJson("plant-energy");
+  const plantWater = getJson("plant-water");
+
+
+  /* ---------- WATER TREND ---------- */
+
+  const waterChartEl = document.getElementById("waterChart");
+  if(waterChartEl){
+    echarts.init(waterChartEl).setOption({
+      tooltip:{trigger:"axis"},
+      xAxis:{type:"category",data:months},
+      yAxis:{type:"value"},
+      series:[{
+        type:"line",
+        data:waterData,
+        smooth:true,
+        areaStyle:{},
+        itemStyle:{color:"#2563eb"}
+      }]
+    });
+  }
+
+
+  /* ---------- ENERGY TREND ---------- */
+
+  const energyChartEl = document.getElementById("energyChart");
+  if(energyChartEl){
+    echarts.init(energyChartEl).setOption({
+      tooltip:{trigger:"axis"},
+      xAxis:{type:"category",data:months},
+      yAxis:{type:"value"},
+      series:[{
+        type:"line",
+        data:energyData,
+        smooth:true,
+        areaStyle:{},
+        itemStyle:{color:"#f97316"}
+      }]
+    });
+  }
+
+
+  /* ---------- ENERGY SOURCE PIE ---------- */
+
+  const energySourceChart = document.getElementById("energySourceChart");
+  if(energySourceChart){
+    echarts.init(energySourceChart).setOption({
+      tooltip:{trigger:"item"},
+      series:[{
+        type:"pie",
+        radius:["40%","70%"],
+        data:[
+          {value:energySources[0] || 0,name:"Diesel Mobile"},
+          {value:energySources[1] || 0,name:"Diesel Stationary"},
+          {value:energySources[2] || 0,name:"Electricity"},
+          {value:energySources[3] || 0,name:"Natural Gas"},
+          {value:energySources[4] || 0,name:"Solar"}
+        ]
+      }]
+    });
+  }
+
+
+  /* ---------- COST ---------- */
+
+  const costChartEl = document.getElementById("costChart");
+  if(costChartEl){
+    echarts.init(costChartEl).setOption({
+      tooltip:{trigger:"axis"},
+      xAxis:{type:"category",data:["Water Cost","Energy Cost"]},
+      yAxis:{type:"value"},
+      series:[{
+        type:"bar",
+        data:[
+          {value:costData[0] || 0,itemStyle:{color:"#2563eb"}},
+          {value:costData[1] || 0,itemStyle:{color:"#f97316"}}
+        ]
+      }]
+    });
+  }
+
+
+  /* ---------- COD ---------- */
+
+  const codChart = document.getElementById("codChart");
+  if(codChart){
+    echarts.init(codChart).setOption({
+      legend:{data:["Inlet COD","Treated COD"]},
+      tooltip:{trigger:"axis"},
+      xAxis:{type:"category",data:months},
+      yAxis:{type:"value"},
+      series:[
+        {name:"Inlet COD",type:"line",data:inletCOD},
+        {name:"Treated COD",type:"line",data:treatedCOD}
+      ]
+    });
+  }
+
+
+  /* ---------- BOD ---------- */
+
+  const bodChart = document.getElementById("bodChart");
+  if(bodChart){
+    echarts.init(bodChart).setOption({
+      legend:{data:["Inlet BOD","Treated BOD"]},
+      tooltip:{trigger:"axis"},
+      xAxis:{type:"category",data:months},
+      yAxis:{type:"value"},
+      series:[
+        {name:"Inlet BOD",type:"line",data:inletBOD},
+        {name:"Treated BOD",type:"line",data:treatedBOD}
+      ]
+    });
+  }
+
+
+  /* ---------- PLANT COMPARISON ---------- */
+
+  const plantChart = document.getElementById("plantChart");
+  if(plantChart){
+    echarts.init(plantChart).setOption({
+      tooltip:{trigger:"axis"},
+      legend:{data:["Water","Energy"]},
+      xAxis:{type:"category",data:plantLabels},
+      yAxis:{type:"value"},
+      series:[
+        {name:"Water",type:"bar",data:plantWater,itemStyle:{color:"#2563eb"}},
+        {name:"Energy",type:"bar",data:plantEnergy,itemStyle:{color:"#f97316"}}
+      ]
+    });
+  }
+
+
+  /* ---------- MONTHLY COMPARISON ---------- */
+
+  const waterEnergyChart = document.getElementById("waterEnergyChart");
+  if(waterEnergyChart){
+    echarts.init(waterEnergyChart).setOption({
+      tooltip:{trigger:"axis"},
+      legend:{data:["Water","Energy"]},
+      xAxis:{type:"category",data:months},
+      yAxis:{type:"value"},
+      series:[
+        {name:"Water",type:"line",data:waterData,smooth:true,itemStyle:{color:"#2563eb"}},
+        {name:"Energy",type:"line",data:energyData,smooth:true,itemStyle:{color:"#f97316"}}
+      ]
+    });
+  }
+
+
+  /* ---------- FILTER CHANGE ---------- */
+
+  const plantSelect = document.getElementById("plantSelect");
+  const wasteType = document.getElementById("wasteType");
+
+  if(plantSelect) plantSelect.addEventListener("change",updateDashboard);
+  if(wasteType) wasteType.addEventListener("change",updateDashboard);
+
+  function updateDashboard(){
+    const plant = plantSelect.value;
+    const type = wasteType.value;
+
+    let url = new URL(window.location.href);
+    url.searchParams.set("plant_id",plant);
+    url.searchParams.set("type",type);
+
+    window.location.href = url.toString();
+  }
+
+});
 </script>
+
 
 {% endblock %}

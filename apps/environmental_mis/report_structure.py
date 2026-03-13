@@ -845,7 +845,7 @@ MANUFACTURING_WASTE_STRUCTURE = [
 "section":"",
 "question":"TOTAL QUANTITY",
 "part_code":"",
-"unit":"Kg",
+"unit":"",
 "treatment_type":"",
 "row_key":"asbestos_total_quantity",
 "waste_type":"HAZ_WASTE",
@@ -1514,17 +1514,287 @@ NON_MANUFACTURING_ENVIRONMENT_STRUCTURE = [
 
 
 # leading_indicator
-# LEAD_INDICATOR = [
-# {
-# "section": "Management Safety Walk",
-# "sub_section": "Leadership Team Safety Walk",
-# "question": "Plan",
-# "row_key": "management_safety_walk_plan",
-# }, 
-# {
-# "section": "",
-# "sub_section": "",
-# "question": "Actual",
-# "row_key": "management_safety_walk_actual",
-# }, 
-# ]
+LEADING_INDICATOR = [
+{
+"section": "Management Safety Walk",
+"sub_section": "Leadership Team Safety Walk",
+"question": "Plan",
+"row_key": "management_safety_walk_plan",
+}, 
+{
+"section": "",
+"sub_section": "",
+"question": "Actual",
+"row_key": "management_safety_walk_actual",
+}, 
+{
+"section": "",
+"sub_section": "",
+"question": "# Observations ",
+"row_key": "management_safety_walk_observations",
+}, 
+{
+"section": None,
+"question": "# Safety Audit Planned ",
+"row_key": "safety_audit_planned",
+}, 
+{
+"section": "",
+"question": "# Safety Audit Conducted ",
+"row_key": "safety_audit_conducted",
+}, 
+{
+"section": "",
+"question": "Safety Audit Round Compliance %",
+"row_key": "safety_audit_round_compliance",
+}, 
+{
+"section": "",
+"question": "Safety Audit Concern Closure Compliance %",
+"row_key": "safety_audit_concern_closure_compliance",
+}, 
+{
+"section": "Safety Meetings",
+"question": "Safety committee meetings planned",
+"row_key": "safety_committee_meetings_planned",
+}, 
+{
+"section": "",
+"question": "Safety committee meetings actual",
+"row_key": "safety_committee_meetings_actual",
+}, 
+{
+"section": "Level 1 Safety Meeting",
+"question": "No. of meetings Scheduled (Production)",
+"row_key": "No_of_meetings_Scheduled_Production",
+}, 
+{
+"section": "",
+"question": "Actual Conducted",
+"row_key": "actual_conducted_1",
+}, 
+{
+"section": "",
+"question": "No. of meetings Scheduled (WED) ",
+"row_key": "no_of_meetings_Scheduled_WED",
+}, 
+{
+"section": "",
+"question": "Actual Conducted",
+"row_key": "actual_conducted_2",
+}, 
+{
+"section": "",
+"question": "No. of meetings Scheduled (Supply Chain & Stores & Logistics)",
+"row_key": "no_of_meetings_Scheduled_Supply_Chain_Stores_Logistics",
+}, 
+{
+"section": "",
+"question": "Actual Conducted",
+"row_key": "actual_conducted_3",
+}, 
+{
+"section": "",
+"question": "No. of meetings Scheduled (Utility)",
+"row_key": "no_of_meetings_Scheduled_Utility",
+}, 
+{
+"section": "",
+"question": "Actual Conducted",
+"row_key": "actual_conducted_4",
+}, 
+{
+"section": "",
+"question": "No. of meetings Scheduled (H& & Admin)",
+"row_key": "no_of_meetings_Scheduled_H_Admin",
+}, 
+{
+"section": "",
+"question": "Actual Conducted",
+"row_key": "actual_conducted_5",
+}, 
+{
+"section": "Level 1 Meeting",
+"question": "Total Level 1 Meetings Planned ",
+"row_key": "total_level_1_meetings_planned",
+}, 
+{
+"section": "",
+"question": "Actual Level 1 Meetings conducted",
+"row_key": "actual_level_1_meetings_conducted",
+}, 
+{
+"section": "",
+"question": "Level 1 Meeting Compliance (%)",
+"row_key": "level_1_meeting_compliance",
+}, 
+{
+"section": "Temp. Employee Safety Management - % of employees with 3 days Induction training against total Hiring",
+"question": "Total No. of Temp. Employees",
+"row_key": "total_no_of_temp_employees",
+}, 
+{
+"section": "",
+"question": "No. of employees with 3 days tranings in the reporting month",
+"row_key": "3days_tranings_reporting_month",
+}, 
+{
+"section": "",
+"question": "% of New Temp. Employee with 3 days training",
+"row_key": "temp_employee_3days_training",
+}, 
+]
+
+
+# Lagging
+LAGGING_INDICATOR = [
+{
+"section": "Manpower",
+"question": "Total Manhours (Staff+Operator+Temp)",
+"row_key": "total_manhours",
+}, 
+{
+"section": "",
+"question": "Mandays",
+"row_key": "mandays",
+}, 
+{
+"section": "",
+"question": "Total Head Count (Staff+Operator+Temp)",
+"row_key": "total_head_count",
+}, 
+{
+"section": "",
+"question": "Head count (Staff+Operator)",
+"row_key": "head_count_staff_operator",
+}, 
+{
+"section": "",
+"question": "Hours Worked",
+"row_key": "hours_worked",
+}, 
+{
+"section": "",
+"question": "Congintent / Temps. Head Count",
+"row_key": "contingent_temps_head_count",
+}, 
+{
+"section": "",
+"question": "Congintent / Temps. Hours Worked",
+"row_key": "contingent_temps_hours_worked",
+}, 
+{
+"section": "Injuries",
+"question": "Fatality",
+"row_key": "fatality",
+}, 
+{
+"section": "",
+"question": "Debalitating",
+"row_key": "debaltering",
+}, 
+{
+"section": "",
+"question": "Lost Time Incident",
+"row_key": "lost_time_incident",
+}, 
+{
+"section": "",
+"question": "Recordable (Only) Cases",
+"row_key": "recordable_cases_only",
+}, 
+{
+"section": "",
+"question": "First Aid Cases (FAC)",
+"row_key": "first_aid_cases_fac",
+}, 
+{
+"section": "",
+"question": "Total Recorable Cases (TRC)",
+"row_key": "total_recorable_cases_trc",
+}, 
+{
+"section": "",
+"question": "HIPO Events (Contractor+ Employees)",
+"row_key": "hipo_events_contractor_employees",
+}, 
+{
+"section": "",
+"question": "LTIR (Lost time Incident Rate) (incident Rate)",
+"row_key": "ltir_incident_rate",
+}, 
+{
+"section": "",
+"question": "TRC FR (Total Recorable Cases Frequency Rate)",
+"row_key": "trc_fr_total_recorable_cases_frequency_rate",
+}, 
+{
+"section": "",
+"question": "No. of Days Lost",
+"row_key": "no_of_days_lost",
+}, 
+{
+"section": "",
+"question": "Days Away Case Rate",
+"row_key": "days_away_case_rate",
+}, 
+{
+"section": "Non Injury Incidents",
+"sub_section": "fire",
+"question": "Minor",
+"row_key": "minor_fire",
+}, 
+{
+"section": "",
+"sub_section": "",
+"question": "Major",
+"row_key": "major_fire",
+}, 
+{
+"section": "",
+"question": "Property Damage",
+"row_key": "property_damage_fire",
+}, 
+{
+"section": "",
+"sub_section": "Spill",
+"question": "Major",
+"row_key": "major_spill",
+}, 
+{
+"section": "",
+"question": "Total Non injury Incidents ",
+"row_key": "total_non_injury_incidents",
+},
+{
+"section": "Investigation & CAPA Compliance ",
+"question": "Total No. of incidents requiring team investigation",
+"row_key": "total_no_of_incidents_requiring_team_investigation",
+},
+{
+"section": "",
+"question": "Total No. of Investigation Pending (Cumulative Till Reporting Month)",
+"row_key": "total_no_of_investigation_pending_cumulative_till_reporting_month",
+},
+{
+"section": "",
+"question": "No. of actions Generated  YTD (Cumulative Till Reporting Month)",
+"row_key": "no_of_actions_generated_ytd_cumulative_till_reporting_month",
+},
+{
+"section": "",
+"question": "No. of  actions completed YTD (Cumulative Till Reporting Month)",
+"row_key": "no_of_actions_completed_ytd_cumulative_till_reporting_month",
+},
+{
+"section": "",
+"question": "No. of actions Pending YTD",
+"row_key": "no_of_actions_pending_ytd",
+},
+{
+"section": "",
+"question": "CAPA Compliance %= (Total no. of action completed/Total number of action generated) *100",
+"row_key": "capa_compliance_percentage",
+},
+]
+

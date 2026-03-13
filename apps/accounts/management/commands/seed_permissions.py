@@ -25,7 +25,19 @@ class Command(BaseCommand):
             ('INSPECTION_DASHBOARD', 'Access Inspection Dashboard',
             'Can access Inspection dashboard',
             'DASHBOARD', 'VIEW', 3),
+
+            ('ENVIRONMENT_DASHBOARD', 'Environment MIS Dashboard',
+            'Can access environment MIS dashboard',
+            'DASHBOARD', 'VIEW', 4),
+
+            ('WASTE_DASHBOARD', 'Waste Dashboard',
+            'Can access waste dashboard',
+            'DASHBOARD', 'VIEW', 5),
             
+            ('SAFETY_DASHBOARD', 'Safety DASHBOARD',
+            'Can access safety_dashboard', 
+            'DASHBOARD', 'VIEW', 6),
+
             # === INCIDENT MODULE ===
             ('ACCESS_INCIDENT_MODULE', 'Access Incident Module', 'Can access incident module', 
              'INCIDENT', 'MODULE_ACCESS', 0),

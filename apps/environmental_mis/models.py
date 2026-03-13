@@ -260,3 +260,57 @@ class EnvironmentEntry(models.Model):
         )
     def __str__(self):
         return f"{self.row_name} - {self.plant.name} - {self.year}"
+    
+
+# Leading Indiacators
+class SafetyIndicatorEntry(models.Model):
+
+    REPORT_TYPE_CHOICES = (
+        ("LEADING_IND", "Leading Indicator"),
+        ("LAGGING_IND", "Lagging Indicator"),
+    )
+
+    plant = models.ForeignKey(Plant, on_delete=models.CASCADE)
+
+    year = models.IntegerField()
+
+    report_type = models.CharField(
+        max_length=50,
+        choices=REPORT_TYPE_CHOICES
+    )
+
+    row_name = models.CharField(max_length=200)
+
+    # Previous Year Data
+    year_2025 = models.FloatField(default=0)
+
+    # MONTHLY
+    jan_qty = models.FloatField(default=0)
+    feb_qty = models.FloatField(default=0)
+    mar_qty = models.FloatField(default=0)
+
+    apr_qty = models.FloatField(default=0)
+    may_qty = models.FloatField(default=0)
+    jun_qty = models.FloatField(default=0)
+
+    jul_qty = models.FloatField(default=0)
+    aug_qty = models.FloatField(default=0)
+    sep_qty = models.FloatField(default=0)
+
+    oct_qty = models.FloatField(default=0)
+    nov_qty = models.FloatField(default=0)
+    dec_qty = models.FloatField(default=0)
+
+    total_quantity = models.FloatField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (
+            "plant",
+            "year",
+            "report_type",
+            "row_name"
+        )
+    def __str__(self):
+        return f"{self.row_name} - {self.plant.name} - {self.year}"

@@ -4,10 +4,32 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.utils import timezone
 from apps.organizations.models import Plant
-from .models import WasteReportData, WasteSummary
-from .report_structure import MANUFACTURING_WASTE_STRUCTURE
+from .models import SafetyIndicatorEntry, WasteReportData, WasteSummary
+from .report_structure import LAGGING_INDICATOR, LEADING_INDICATOR, MANUFACTURING_WASTE_STRUCTURE
 from django.db.models import Sum
 from .models import EnvironmentEntry
+
+
+def prepare_waste_rows(structure):
+
+    rows = []
+    section_no = 0
+    current_section = None
+
+    for r in structure:
+        row = r.copy()
+
+        if row.get("section"):
+            section_no += 1
+            current_section = row["section"]
+            row["section_no"] = section_no
+        else:
+            row["section_no"] = ""
+
+        rows.append(row)
+
+    return rows
+
 
 
 def manufacturing_waste_report(request):
@@ -101,7 +123,7 @@ def manufacturing_waste_report(request):
     # ================= CONTEXT =================
 
     context = {
-        "report_rows": MANUFACTURING_WASTE_STRUCTURE,
+        "report_rows": prepare_waste_rows(MANUFACTURING_WASTE_STRUCTURE),
         "data_map": data_map,
         "summary_map": summary_map,   
         "production_summary": prod,
@@ -142,11 +164,18 @@ def save_waste_report(request):
     rows=data.get("rows",[])
     summary=data.get("summary",[])
 
-    plant_id=request.GET.get("plant_id")
-    waste_type=request.GET.get("type","manufacturing")
+    plant_id = request.GET.get("plant_id")
+    waste_type = request.GET.get("type")
 
-    report_type="MANUFACTURING" if waste_type=="manufacturing" else "NON_MANUFACTURING"
+    print("waste_type:", waste_type)
+    print("plant_id:", plant_id)
 
+    if waste_type == "MANUFACTURING":
+        report_type = "MANUFACTURING"
+        print(" If report_type:", report_type)
+    else:
+        report_type = "NON_MANUFACTURING"
+        print("else report_type:", report_type)
     plant=Plant.objects.get(id=plant_id)
 
     year=timezone.now().year
@@ -191,14 +220,6 @@ def save_waste_report(request):
     return JsonResponse({"status":"success"})
 
 
-
-
-
-
-
-
-
-
 import json
 
 from django.shortcuts import render
@@ -223,6 +244,7 @@ def prepare_rows(structure):
 
     rows = []
     current_section = ""
+    section_no = 0
 
     for r in structure:
 
@@ -230,10 +252,13 @@ def prepare_rows(structure):
 
         if row.get("section"):
             current_section = row["section"]
+            section_no += 1
+            row["sr_no"] = section_no
+        else:
+            row["sr_no"] = ""
 
         row["category"] = current_section
         row["subcategory"] = row.get("sub_section", "")
-
         row["question"] = row.get("question", "")
         row["unit_category"] = row.get("unit_category", "")
         row["unit"] = row.get("unit", "")
@@ -257,11 +282,11 @@ def prepare_rows(structure):
 
         if cat not in shown_category:
             row["category_rowspan"] = category_counts[cat]
+            row["sr_rowspan"] = category_counts[cat]   # ADD THIS
             shown_category.add(cat)
         else:
             row["category_rowspan"] = None
-
-
+            row["sr_rowspan"] = None   # ADD THIS
     # ================= SUBCATEGORY ROWSPAN =================
 
     subcategory_counts = {}
@@ -291,16 +316,6 @@ def prepare_rows(structure):
             row["subcategory_rowspan"] = None
 
     return rows
-
-
-
-
-
-
-
-
-
-
 
 
 from .models import EnvironmentEntry
@@ -365,6 +380,7 @@ def environment_report(request):
         context
     )
 
+
 # ===============================
 # SAVE DATA API
 # ===============================
@@ -374,10 +390,14 @@ def save_environment_report(request):
         return JsonResponse({"status": "error"})
 
     data = json.loads(request.body)
+    print("data:", data)
 
     plant_id = data.get("plant_id")
+    print("plant_id:", plant_id)
     report_type = data.get("report_type")
-    year = data.get("year")
+    print("report_type:", report_type)
+
+    year = timezone.now().year
 
     rows = data.get("rows", [])
 
@@ -652,13 +672,275 @@ def environment_dashboard(request):
 
 
 
+# 
+def safety_indicator(request):
+
+    user_plants = Plant.objects.all()
+
+    selected_type = request.GET.get("type", "LEADING_INDICATOR")
+    plant_id = request.GET.get("plant_id")
+
+    if plant_id:
+        plant = Plant.objects.get(id=plant_id)
+    else:
+        plant = user_plants.first()
+
+    year = timezone.now().year
+
+    leading_indicator_rows = prepare_rows(LEADING_INDICATOR)
+    lagging_indicator_rows = prepare_rows(LAGGING_INDICATOR)
+
+    months = [
+        "jan","feb","mar",
+        "apr","may","jun",
+        "jul","aug","sep",
+        "oct","nov","dec"
+    ]
+
+    report_type = (
+        "LEADING_INDICATOR"
+        if selected_type == "LEADING_INDICATOR"
+        else "LAGGING_INDICATOR"
+    )
+
+    # ================= LOAD SAVED DATA =================
+
+    saved_entries = SafetyIndicatorEntry.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=report_type
+    )
+
+    data_map = {
+        entry.row_name: entry
+        for entry in saved_entries
+    }
+
+    context = {
+        "leading_indicator_rows": leading_indicator_rows,
+        "lagging_indicator_rows": lagging_indicator_rows,
+        "months": months,
+        "selected_type": selected_type,
+        "selected_plant": plant,
+        "user_plants": user_plants,
+        "current_year": year,
+        "data_map": data_map
+    }
+
+    return render(
+        request,
+        "environmental_mis/safety_indicator.html",
+        context
+    )
 
 
 
+def save_safety_indicator(request):
+    if request.method != "POST":
+        return JsonResponse({"status": "error"}, status=400)
+
+    data = json.loads(request.body)
+
+    plant_id = data.get("plant_id")
+    report_type = data.get("report_type")
+    year = timezone.now().year
+    
+    rows = data.get("rows", [])
+
+    plant = Plant.objects.get(id=plant_id)
+
+    if report_type == "LEADING_INDICATOR":
+        report_type = "LEADING_INDICATOR"
+    else:
+        report_type = "LAGGING_INDICATOR"
+
+    months = [
+        "jan_qty","feb_qty","mar_qty","apr_qty","may_qty","jun_qty",
+        "jul_qty","aug_qty","sep_qty","oct_qty","nov_qty","dec_qty"
+    ]
+
+    for row in rows:
+
+        row_name = row.get("row_name")
+
+        # Convert empty values to 0
+        for m in months:
+            val = row.get(m)
+            row[m] = float(val) if val not in ["", None] else 0
+
+        #calculate totals
+        row["total_quantity"] = sum(row[m] for m in months)
+
+        SafetyIndicatorEntry.objects.update_or_create(
+            plant=plant,
+            year=year,
+            report_type=report_type,
+            row_name=row_name,
+            defaults=row
+        )
+
+    return JsonResponse({"status": "success"})
 
 
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+from django.utils import timezone
+
+from apps.organizations.models import Plant
+from .models import SafetyIndicatorEntry
+from .report_structure import LEADING_INDICATOR, LAGGING_INDICATOR
 
 
+def download_safety_excel(request):
+
+    plant_id = request.GET.get("plant_id")
+    selected_type = request.GET.get("type", "LEADING_INDICATOR")
+
+    plant = Plant.objects.get(id=plant_id)
+    year = timezone.now().year
+
+    structure = (
+        LEADING_INDICATOR
+        if selected_type == "LEADING_INDICATOR"
+        else LAGGING_INDICATOR
+    )
+
+    saved_entries = SafetyIndicatorEntry.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=selected_type
+    )
+
+    data_map = {e.row_name: e for e in saved_entries}
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Safety Indicator"
+
+    header_fill = PatternFill(start_color="79A1C9", end_color="79A1C9", fill_type="solid")
+    bold_font = Font(bold=True)
+    center = Alignment(horizontal="center", vertical="center")
+
+    months = [
+        "jan","feb","mar","apr","may","jun",
+        "jul","aug","sep","oct","nov","dec"
+    ]
+
+    # ================= HEADERS =================
+
+    headers = [
+        "SL NO",
+        "CATEGORY",
+        "SUB CATEGORY",
+        "QUESTION",
+        "2025",
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec",
+        "TOTAL"
+    ]
+
+    title = f"{plant.name} - {selected_type.replace('_',' ')} - {year}"
+
+    last_col = get_column_letter(len(headers))
+
+    ws.merge_cells(f"A1:{last_col}1")
+
+    title_cell = ws["A1"]
+    title_cell.value = title
+    title_cell.font = Font(bold=True, size=14)
+    title_cell.alignment = center
+
+    ws.row_dimensions[1].height = 28
+
+    ws.append([])
+    ws.append(headers)
+
+    for c in ws[3]:
+        c.font = bold_font
+        c.fill = header_fill
+        c.alignment = center
+
+    # ================= DATA =================
+
+    sl = 0
+    last_section = None
+    current_section = None
+
+    for row in structure:
+
+        if row.get("section"):
+            current_section = row["section"]
+
+        section = current_section
+
+        if section != last_section:
+            sl += 1
+            sr = sl
+            category = section
+            last_section = section
+        else:
+            sr = ""
+            category = ""
+
+        entry = data_map.get(row["row_key"])
+
+        month_values = []
+        total = 0
+
+        for m in months:
+            val = getattr(entry, f"{m}_qty", 0) if entry else 0
+            month_values.append(val)
+            total += val
+
+        excel_row = [
+
+            sr,
+            category,
+            row.get("sub_section",""),
+            row.get("question",""),
+
+            getattr(entry,"year_2025",0) if entry else 0,
+
+            *month_values,
+
+            total
+        ]
+
+        ws.append(excel_row)
+
+    # ================= COLUMN WIDTH =================
+
+    ws.column_dimensions["A"].width = 6
+
+    for i, column in enumerate(ws.columns, 1):
+
+        if i == 1:
+            continue
+
+        max_length = 0
+        letter = get_column_letter(i)
+
+        for cell in column:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+
+        ws.column_dimensions[letter].width = max_length + 3
+
+    # ================= DOWNLOAD =================
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    filename = f"safety_indicator_{plant.name}_{year}.xlsx"
+
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+
+    return response
 
 
 
@@ -773,3 +1055,650 @@ def waste_dashboard(request):
         "environmental_mis/waste_dashboard.html",
         context
     )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+from django.utils import timezone
+
+from apps.organizations.models import Plant
+from .models import WasteReportData, WasteSummary
+from .report_structure import MANUFACTURING_WASTE_STRUCTURE
+
+
+def download_waste_excel(request):
+
+    plant_id = request.GET.get("plant_id")
+    waste_type = request.GET.get("type", "MANUFACTURING")
+
+    plant = Plant.objects.get(id=plant_id)
+    year = timezone.now().year
+
+    # ================= MAIN DATA =================
+
+    report_data = WasteReportData.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=waste_type
+    )
+
+    data_map = {d.row_name: d for d in report_data}
+
+    # ================= SUMMARY DATA =================
+
+    summary_data = WasteSummary.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=waste_type
+    )
+
+    summary_map = {s.summary_type: s for s in summary_data}
+
+    # ================= WORKBOOK =================
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Waste Report"
+
+    # ================= STYLES =================
+
+    header_fill = PatternFill(start_color="79A1C9", end_color="79A1C9", fill_type="solid")
+    total_fill = PatternFill(start_color="BDD7EE", end_color="BDD7EE", fill_type="solid")
+
+    bold_font = Font(bold=True)
+    center_align = Alignment(horizontal="center", vertical="center")
+
+    # ================= HEADERS =================
+
+    headers = [
+        "SR.NO","SECTION","SCRAP","PART CODE","UNIT","TREATMENT",
+
+        "Jan QTY","Jan COST",
+        "Feb QTY","Feb COST",
+        "Mar QTY","Mar COST",
+        "I Q (QTY)","I Q (COST)",
+
+        "Apr QTY","Apr COST",
+        "May QTY","May COST",
+        "Jun QTY","Jun COST",
+        "II Q (QTY)","II Q (COST)",
+
+        "Jul QTY","Jul COST",
+        "Aug QTY","Aug COST",
+        "Sep QTY","Sep COST",
+        "III Q (QTY)","III Q (COST)",
+
+        "Oct QTY","Oct COST",
+        "Nov QTY","Nov COST",
+        "Dec QTY","Dec COST",
+        "IV Q (QTY)","IV Q (COST)",
+
+        "TOTAL QTY","TOTAL COST"
+    ]
+
+    # ================= TITLE =================
+
+    title = f"{plant.name} - MONTHLY - {waste_type.upper()} WASTE DATA - {year} Year"
+
+    last_col = get_column_letter(len(headers))
+
+    ws.merge_cells(f"A1:{last_col}1")
+
+    title_cell = ws["A1"]
+    title_cell.value = title
+    title_cell.font = Font(bold=True, size=14)
+    title_cell.alignment = center_align
+
+    title_cell.fill = PatternFill(
+        start_color="D9EAF7",
+        end_color="D9EAF7",
+        fill_type="solid"
+    )
+
+    ws.row_dimensions[1].height = 28
+
+    # ================= HEADER ROW =================
+
+    ws.append([])
+    ws.append(headers)
+
+    for cell in ws[3]:
+        cell.font = bold_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+
+    # ================= ROW DATA =================
+
+    sl = 0
+    last_section = None
+    current_section = None
+
+    for row in MANUFACTURING_WASTE_STRUCTURE:
+
+        saved = data_map.get(row["row_key"])
+
+        # if section is empty, reuse previous section
+        if row["section"]:
+            current_section = str(row["section"]).strip()
+
+        section = current_section
+
+        # increase SR only when section changes
+        if section != last_section:
+            sl += 1
+            sr_no = sl
+            last_section = section
+        else:
+            sr_no = ""
+
+        jan = saved.jan_qty if saved else 0
+        feb = saved.feb_qty if saved else 0
+        mar = saved.mar_qty if saved else 0
+
+        apr = saved.apr_qty if saved else 0
+        may = saved.may_qty if saved else 0
+        jun = saved.jun_qty if saved else 0
+
+        jul = saved.jul_qty if saved else 0
+        aug = saved.aug_qty if saved else 0
+        sep = saved.sep_qty if saved else 0
+
+        octv = saved.oct_qty if saved else 0
+        nov = saved.nov_qty if saved else 0
+        dec = saved.dec_qty if saved else 0
+
+        q1 = jan + feb + mar
+        q2 = apr + may + jun
+        q3 = jul + aug + sep
+        q4 = octv + nov + dec
+
+        total_qty = q1 + q2 + q3 + q4
+
+        excel_row = [
+
+            sr_no,
+            section,
+            row["question"],
+            saved.part_code if saved else "",
+            row["unit"],
+            row["treatment_type"],
+
+            jan, saved.jan_cost if saved else 0,
+            feb, saved.feb_cost if saved else 0,
+            mar, saved.mar_cost if saved else 0,
+
+            q1, 0,
+
+            apr, saved.apr_cost if saved else 0,
+            may, saved.may_cost if saved else 0,
+            jun, saved.jun_cost if saved else 0,
+
+            q2, 0,
+
+            jul, saved.jul_cost if saved else 0,
+            aug, saved.aug_cost if saved else 0,
+            sep, saved.sep_cost if saved else 0,
+
+            q3, 0,
+
+            octv, saved.oct_cost if saved else 0,
+            nov, saved.nov_cost if saved else 0,
+            dec, saved.dec_cost if saved else 0,
+
+            q4, 0,
+
+            total_qty,
+            saved.total_cost if saved else 0
+        ]
+
+        ws.append(excel_row)
+
+        if row["question"] == "TOTAL QUANTITY":
+            for cell in ws[ws.max_row]:
+                cell.fill = total_fill
+                cell.font = bold_font
+
+    # ================= COLUMN WIDTH =================
+
+    ws.column_dimensions['A'].width = 5
+
+    for i, column in enumerate(ws.columns, 1):
+
+        if i == 1:
+            continue
+
+        max_length = 0
+        column_letter = get_column_letter(i)
+
+        for cell in column:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+
+        ws.column_dimensions[column_letter].width = max_length + 3
+
+    # ================= SUMMARY SHEET =================
+
+    summary_ws = wb.create_sheet(title="Waste Summary")
+
+    summary_headers = [
+        "Waste Type",
+
+        "Jan QTY","Jan COST",
+        "Feb QTY","Feb COST",
+        "Mar QTY","Mar COST",
+        "Q1 QTY","Q1 COST",
+
+        "Apr QTY","Apr COST",
+        "May QTY","May COST",
+        "Jun QTY","Jun COST",
+        "Q2 QTY","Q2 COST",
+
+        "Jul QTY","Jul COST",
+        "Aug QTY","Aug COST",
+        "Sep QTY","Sep COST",
+        "Q3 QTY","Q3 COST",
+
+        "Oct QTY","Oct COST",
+        "Nov QTY","Nov COST",
+        "Dec QTY","Dec COST",
+        "Q4 QTY","Q4 COST",
+
+        "TOTAL QTY","TOTAL COST"
+    ]
+
+    summary_ws.append(summary_headers)
+
+    for cell in summary_ws[1]:
+        cell.font = bold_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+
+    summary_types = [
+        "NON_HAZ",
+        "HAZ_PROCESS",
+        "E_WASTE",
+        "GRAND_WASTE",
+        "PRODUCTION",
+        "NON_HAZ_UNIT",
+        "PROC_HAZ_UNIT",
+        "NON_PROC_HAZ",
+        "DIVERSION_RATE"
+    ]
+
+    months = [
+        "jan","feb","mar",
+        "apr","may","jun",
+        "jul","aug","sep",
+        "oct","nov","dec"
+    ]
+
+    for s_type in summary_types:
+
+        s = summary_map.get(s_type)
+
+        row_data = [s_type]
+
+        for m in months:
+            row_data.append(getattr(s, f"{m}_qty", 0) if s else 0)
+            row_data.append(getattr(s, f"{m}_cost", 0) if s else 0)
+
+        row_data.append(getattr(s,"q1_quantity",0) if s else 0)
+        row_data.append(getattr(s,"q1_cost",0) if s else 0)
+
+        row_data.append(getattr(s,"q2_quantity",0) if s else 0)
+        row_data.append(getattr(s,"q2_cost",0) if s else 0)
+
+        row_data.append(getattr(s,"q3_quantity",0) if s else 0)
+        row_data.append(getattr(s,"q3_cost",0) if s else 0)
+
+        row_data.append(getattr(s,"q4_quantity",0) if s else 0)
+        row_data.append(getattr(s,"q4_cost",0) if s else 0)
+
+        row_data.append(getattr(s,"total_quantity",0) if s else 0)
+        row_data.append(getattr(s,"total_cost",0) if s else 0)
+
+        summary_ws.append(row_data)
+
+    for i, column in enumerate(summary_ws.columns, 1):
+
+        max_length = 0
+        column_letter = get_column_letter(i)
+
+        for cell in column:
+            if cell.value:
+                max_length = max(max_length, len(str(cell.value)))
+
+        summary_ws.column_dimensions[column_letter].width = max_length + 3
+
+    # ================= DOWNLOAD =================
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    filename = f"waste_report_{plant.name}_{year}.xlsx"
+
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+
+    return response
+
+
+
+
+
+
+
+
+
+import openpyxl
+from openpyxl.styles import Font, Alignment, PatternFill
+from openpyxl.utils import get_column_letter
+from django.http import HttpResponse
+from django.utils import timezone
+
+from apps.organizations.models import Plant
+from .models import EnvironmentEntry
+from .report_structure import (
+    MANUFACTURING_ENVIRONMENT_STRUCTURE,
+    NON_MANUFACTURING_ENVIRONMENT_STRUCTURE,
+)
+
+
+def download_environment_excel(request):
+
+    plant_id = request.GET.get("plant_id")
+    selected_type = request.GET.get("type", "MANUFACTURING")
+
+    plant = Plant.objects.get(id=plant_id)
+    year = timezone.now().year
+
+    report_type = (
+        "MANUFACTURING_ENV"
+        if selected_type == "MANUFACTURING"
+        else "NON_MANUFACTURING_ENV"
+    )
+
+    saved_entries = EnvironmentEntry.objects.filter(
+        plant=plant,
+        year=year,
+        report_type=report_type
+    )
+
+    data_map = {e.row_name: e for e in saved_entries}
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Environment Report"
+
+    header_fill = PatternFill(start_color="79A1C9", end_color="79A1C9", fill_type="solid")
+    bold_font = Font(bold=True)
+    center = Alignment(horizontal="center", vertical="center")
+
+    months = [
+        "jan","feb","mar","apr","may","jun",
+        "jul","aug","sep","oct","nov","dec"
+    ]
+
+    # ================= HEADERS =================
+
+    headers = [
+        "SL NO",
+        "CATEGORY",
+        "SUB CATEGORY",
+        "QUESTION",
+        "UNIT CATEGORY",
+        "UNIT",
+        "2024",
+        "2025",
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec",
+        "TOTAL"
+    ]
+
+    title = f"{plant.name} - {selected_type} ENVIRONMENT REPORT - {year}"
+
+    last_col = get_column_letter(len(headers))
+    ws.merge_cells(f"A1:{last_col}1")
+
+    cell = ws["A1"]
+    cell.value = title
+    cell.font = Font(bold=True, size=14)
+    cell.alignment = center
+
+    ws.append([])
+    ws.append(headers)
+
+    for c in ws[3]:
+        c.font = bold_font
+        c.fill = header_fill
+        c.alignment = center
+
+    # ================= STRUCTURE =================
+
+    structure = (
+        MANUFACTURING_ENVIRONMENT_STRUCTURE
+        if selected_type == "MANUFACTURING"
+        else NON_MANUFACTURING_ENVIRONMENT_STRUCTURE
+    )
+
+    sl = 0
+    last_section = None
+    current_section = None
+
+    for row in structure:
+
+        if row["section"]:
+            current_section = row["section"]
+
+        section = current_section
+
+        if section != last_section:
+            sl += 1
+            sr = sl
+            last_section = section
+        else:
+            sr = ""
+
+        entry = data_map.get(row["row_key"])
+
+        month_values = []
+        total = 0
+
+        for m in months:
+            val = getattr(entry, f"{m}_qty", 0) if entry else 0
+            month_values.append(val)
+            total += val
+
+        excel_row = [
+
+            sr,
+            section,
+            row.get("sub_section",""),
+            row.get("question",""),
+            row.get("unit_category",""),
+            row.get("unit",""),
+
+            getattr(entry,"year_2024",0) if entry else 0,
+            getattr(entry,"year_2025",0) if entry else 0,
+
+            *month_values,
+
+            total
+        ]
+
+        ws.append(excel_row)
+
+    # ================= WIDTH =================
+
+    ws.column_dimensions["A"].width = 6
+
+    for i, column in enumerate(ws.columns, 1):
+
+        if i == 1:
+            continue
+
+        max_len = 0
+        letter = get_column_letter(i)
+
+        for cell in column:
+            if cell.value:
+                max_len = max(max_len, len(str(cell.value)))
+
+        ws.column_dimensions[letter].width = max_len + 3
+
+    # ================= DOWNLOAD =================
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+    filename = f"environment_report_{plant.name}_{year}.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    wb.save(response)
+
+    return response
+
+
+
+
+
+
+
+from django.shortcuts import render
+from django.utils import timezone
+from apps.organizations.models import Plant
+from .models import SafetyIndicatorEntry
+
+
+def safety_dashboard(request):
+
+    user_plants = Plant.objects.all()
+
+    plant_id = request.GET.get("plant_id")
+    selected_type = request.GET.get("type", "LEADING_INDICATOR")
+
+    year = timezone.now().year
+
+    if plant_id:
+        selected_plant = Plant.objects.filter(id=plant_id).first()
+    else:
+        selected_plant = user_plants.first()
+
+    entries = SafetyIndicatorEntry.objects.filter(
+        plant=selected_plant,
+        year=year,
+        report_type=selected_type
+    )
+
+    data_map = {e.row_name: e for e in entries}
+
+    months = [
+        "jan","feb","mar",
+        "apr","may","jun",
+        "jul","aug","sep",
+        "oct","nov","dec"
+    ]
+
+    def monthly(row_key):
+        entry = data_map.get(row_key)
+        if not entry:
+            return [0]*12
+
+        return [
+            float(getattr(entry, f"{m}_qty") or 0)
+            for m in months
+        ]
+
+    def total(row_key):
+        entry = data_map.get(row_key)
+        if not entry:
+            return 0
+        return float(entry.total_quantity or 0)
+
+
+    # ----------------------
+    # Leading calculations
+    # ----------------------
+
+    walk_plan_total = total("management_safety_walk_plan")
+    walk_actual_total = total("management_safety_walk_actual")
+
+    walk_compliance = 0
+    if walk_plan_total > 0:
+        walk_compliance = round((walk_actual_total / walk_plan_total) * 100, 1)
+
+
+    # ----------------------
+    # Context
+    # ----------------------
+
+    context = {
+
+        "user_plants": user_plants,
+        "selected_plant": selected_plant,
+        "selected_type": selected_type,
+        "year": year,
+
+        # KPI
+        "lti_total": total("lost_time_incident"),
+        "fatality_total": total("fatality"),
+        "hipo_total": total("hipo_events_contractor_employees"),
+        "days_lost_total": total("no_of_days_lost"),
+
+        "walk_plan_total": walk_plan_total,
+        "walk_actual_total": walk_actual_total,
+        "audit_actual_total": total("safety_audit_conducted"),
+        "meeting_compliance_avg": walk_compliance,
+
+
+        # ---------- Lagging Charts ----------
+
+        "lti_data": monthly("lost_time_incident"),
+        "recordable_data": monthly("recordable_cases_only"),
+        "first_aid_data": monthly("first_aid_cases_fac"),
+
+        "fatality_data": monthly("fatality"),
+        "hipo_data": monthly("hipo_events_contractor_employees"),
+        "days_lost_data": monthly("no_of_days_lost"),
+
+
+        # ---------- Leading Charts ----------
+
+        "walk_plan": monthly("management_safety_walk_plan"),
+        "walk_actual": monthly("management_safety_walk_actual"),
+
+        "audit_plan": monthly("safety_audit_planned"),
+        "audit_actual": monthly("safety_audit_conducted"),
+
+        "meeting_compliance": monthly("level_1_meeting_compliance"),
+
+        "observations_data": monthly("management_safety_walk_observations"),
+
+        "committee_plan": monthly("safety_committee_meetings_planned"),
+        "committee_actual": monthly("safety_committee_meetings_actual"),
+
+        "training_data": monthly("temp_employee_3days_training"),
+    }
+
+    return render(
+        request,
+        "environmental_mis/safety_dashboard.html",
+        context
+    ) 

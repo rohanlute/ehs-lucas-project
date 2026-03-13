@@ -92,16 +92,52 @@ Analytics Dashboard{% endblock %} {% block extra_css %}
     font-size: 0.875rem;
     font-weight: 600;
   }
+  .content-header {
+    display: none;
+  }
+
+  .add-waste-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    transition: all 0.25s ease;
+  }
+
+  .add-waste-btn i {
+    font-size: 14px;
+  }
+
+  .add-waste-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #059669, #047857);
+  }
 </style>
 
 {% endblock %} {% block content %}
 
 <div class="container-fluid">
-  <h3 class="mb-4">Waste Analytics Dashboard</h3>
+  <div class="d-flex justify-content-between align-items-center mt-2">
+    <h3 class="m-0">Waste Analytics Dashboard</h3>
+
+    <a href="{% url 'environmental_mis:manufacturing_waste_report' %}" class="add-waste-btn">
+      <i class="fas fa-plus-circle"></i>
+      Add Waste Entry
+    </a>
+  </div>
 
   <!-- FILTER (UNCHANGED) -->
 
-  <div class="plant-selector-section">
+  <div class="plant-selector-section mt-3">
     <div class="row align-items-center">
       <div class="col-md-5">
         <div class="plant-selector-container">
@@ -111,18 +147,16 @@ Analytics Dashboard{% endblock %} {% block extra_css %}
           </label>
 
           <select id="plantSelect">
-
             {% for plant in user_plants %}
 
-            <option value="{{ plant.id }}"
+            <option
+            value="{{ plant.id }}"
             {% if selected_plant and plant.id == selected_plant.id %}selected{% endif %}>
             {{ plant.name }}
-
             </option>
 
             {% endfor %}
-
-            </select>
+          </select>
         </div>
       </div>
 
@@ -141,18 +175,16 @@ Analytics Dashboard{% endblock %} {% block extra_css %}
           </label>
 
           <select id="wasteType">
-
             <option value="MANUFACTURING"
-            {% if selected_type == "MANUFACTURING" %}selected{% endif %}>
-            Manufacturing Waste
-            </option>
+                {% if selected_type == "MANUFACTURING" %}selected{% endif %}>
+                Manufacturing Waste
+                </option>
 
-            <option value="NON_MANUFACTURING"
-            {% if selected_type == "NON_MANUFACTURING" %}selected{% endif %}>
-            Non Manufacturing Waste
+                <option value="NON_MANUFACTURING"
+                {% if selected_type == "NON_MANUFACTURING" %}selected{% endif %}>
+                Non Manufacturing Waste
             </option>
-
-            </select>
+          </select>
         </div>
       </div>
     </div>

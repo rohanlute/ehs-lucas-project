@@ -1,0 +1,673 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Indicator Dashboard{% endblock %}
+
+{% block extra_css %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+
+<style>
+
+.dashboard-card{
+background:white;
+border-radius:10px;
+padding:20px;
+box-shadow:0 4px 10px rgba(0,0,0,0.06);
+margin-bottom:20px;
+}
+
+.chart-box{
+height:320px;
+width:100%;
+}
+
+/* Plant selector */
+
+.plant-selector-section{
+background:linear-gradient(135deg,#2563eb,#1e40af);
+border-radius:10px;
+padding:1.5rem;
+margin-bottom:1.5rem;
+}
+
+.plant-selector-container{
+display:flex;
+align-items:center;
+gap:1rem;
+flex-wrap:wrap;
+}
+
+.plant-selector-container label{
+font-weight:600;
+color:#fff;
+display:flex;
+align-items:center;
+gap:0.5rem;
+font-size:0.95rem;
+}
+
+.plant-selector-container select{
+flex:1;
+min-width:250px;
+padding:0.75rem 1rem;
+border:2px solid #e2e8f0;
+border-radius:6px;
+font-size:0.95rem;
+background:white;
+cursor:pointer;
+}
+
+.plant-count-badge{
+display:inline-flex;
+align-items:center;
+gap:0.5rem;
+padding:0.5rem 1rem;
+background:linear-gradient(135deg,#10b981,#059669);
+color:white;
+border-radius:6px;
+font-size:0.875rem;
+font-weight:600;
+}
+
+.content-header{
+display:none;
+}
+
+.add-waste-btn{
+display:inline-flex;
+align-items:center;
+gap:8px;
+background:linear-gradient(135deg,#10b981,#059669);
+color:white;
+border:none;
+padding:10px 18px;
+border-radius:8px;
+font-size:14px;
+font-weight:600;
+cursor:pointer;
+box-shadow:0 4px 10px rgba(0,0,0,0.15);
+}
+
+</style>
+
+{% endblock %}
+
+
+{% block content %}
+
+<div class="container-fluid">
+
+<div class="d-flex justify-content-between align-items-center mt-2">
+<h3 class="m-0">Indicator Analytics Dashboard</h3>
+
+<a href="{% url 'environmental_mis:safety_indicator' %}" class="add-waste-btn">
+<i class="fas fa-plus-circle"></i>
+Add Indicator Entry
+</a>
+</div>
+
+
+<!-- FILTER -->
+
+<div class="plant-selector-section mt-3">
+<div class="row align-items-center">
+
+<div class="col-md-5">
+<div class="plant-selector-container">
+
+<label>
+<i class="fas fa-building"></i>
+<span>Select Plant:</span>
+</label>
+
+<select id="plantSelect">
+{% for plant in user_plants %}
+<option value="{{ plant.id }}"
+{% if plant.id == selected_plant.id %}selected{% endif %}>
+{{ plant.name }}
+</option>
+{% endfor %}
+</select>
+
+</div>
+</div>
+
+
+<div class="col-md-2 text-end">
+<span class="plant-count-badge">
+<i class="fas fa-check-circle"></i>
+{{ user_plants.count }} plant(s)
+</span>
+</div>
+
+
+<div class="col-md-5">
+<div class="plant-selector-container">
+
+<label>
+<i class="fas fa-recycle"></i>
+<span>Indicator Type:</span>
+</label>
+
+<select id="wasteType">
+
+<option value="LEADING_INDICATOR"
+{% if selected_type == "LEADING_INDICATOR" %}selected{% endif %}>
+LEADING INDICATOR
+</option>
+
+<option value="LAGGING_INDICATOR"
+{% if selected_type == "LAGGING_INDICATOR" %}selected{% endif %}>
+LAGGING INDICATOR
+</option>
+
+</select>
+
+</div>
+</div>
+
+</div>
+</div>
+
+
+<!-- KPI CARDS -->
+
+<div class="row mt-4">
+
+{% if selected_type == "LEADING_INDICATOR" %}
+
+<div class="col-md-3">
+<div class="dashboard-card text-center">
+<h6>Safety Walk Planned</h6>
+<h3>{{ walk_plan_total }}</h3>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="dashboard-card text-center">
+<h6>Safety Walk Actual</h6>
+<h3>{{ walk_actual_total }}</h3>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="dashboard-card text-center">
+<h6>Audit Conducted</h6>
+<h3>{{ audit_actual_total }}</h3>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="dashboard-card text-center">
+<h6>Meeting Compliance</h6>
+<h3>{{ meeting_compliance_avg }}%</h3>
+</div>
+</div>
+
+{% endif %}
+
+
+{% if selected_type == "LAGGING_INDICATOR" %}
+
+<div class="col-md-3">
+<div class="dashboard-card text-center">
+<h6>Lost Time Incidents</h6>
+<h3>{{ lti_total }}</h3>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="dashboard-card text-center">
+<h6>Fatality</h6>
+<h3>{{ fatality_total }}</h3>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="dashboard-card text-center">
+<h6>HIPO Events</h6>
+<h3>{{ hipo_total }}</h3>
+</div>
+</div>
+
+<div class="col-md-3">
+<div class="dashboard-card text-center">
+<h6>Days Lost</h6>
+<h3>{{ days_lost_total }}</h3>
+</div>
+</div>
+
+{% endif %}
+
+</div>
+
+
+
+<!-- LEADING INDICATOR -->
+
+{% if selected_type == "LEADING_INDICATOR" %}
+
+<div class="row">
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Safety Walk</h6>
+<div id="walkChart" class="chart-box"></div>
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Safety Audit</h6>
+<div id="auditChart" class="chart-box"></div>
+</div>
+</div>
+
+</div>
+
+
+<div class="row">
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Meeting Compliance</h6>
+<div id="meetingChart" class="chart-box"></div>
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Safety Walk Observations</h6>
+<div id="observationChart" class="chart-box"></div>
+</div>
+</div>
+
+</div>
+
+
+<div class="row">
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Committee Meetings</h6>
+<div id="committeeChart" class="chart-box"></div>
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Temp Employee Training</h6>
+<div id="trainingChart" class="chart-box"></div>
+</div>
+</div>
+
+</div>
+
+{% endif %}
+
+
+
+<!-- LAGGING INDICATOR -->
+
+{% if selected_type == "LAGGING_INDICATOR" %}
+
+<div class="row">
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>LTI Trend</h6>
+<div id="ltiChart" class="chart-box"></div>
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Incident Types</h6>
+<div id="incidentChart" class="chart-box"></div>
+</div>
+</div>
+
+</div>
+
+
+<div class="row">
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Fatality Trend</h6>
+<div id="fatalityChart" class="chart-box"></div>
+</div>
+</div>
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>HIPO Events</h6>
+<div id="hipoChart" class="chart-box"></div>
+</div>
+</div>
+
+</div>
+
+
+<div class="row">
+
+<div class="col-md-6">
+<div class="dashboard-card">
+<h6>Days Lost</h6>
+<div id="daysLostChart" class="chart-box"></div>
+</div>
+</div>
+
+</div>
+
+{% endif %}
+
+</div>
+
+
+
+<script>
+
+const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
+const walkPlan={{ walk_plan|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+const walkActual={{ walk_actual|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+
+const auditPlan={{ audit_plan|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+const auditActual={{ audit_actual|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+
+const meeting={{ meeting_compliance|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+
+const lti={{ lti_data|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+const recordable={{ recordable_data|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+const firstAid={{ first_aid_data|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+
+const fatality={{ fatality_data|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+const hipo={{ hipo_data|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+const daysLost={{ days_lost_data|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+const observations={{ observations_data|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+
+const committeePlan={{ committee_plan|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+const committeeActual={{ committee_actual|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+
+const training={{ training_data|default:"[0,0,0,0,0,0,0,0,0,0,0,0]"|safe }}
+
+
+
+/* WALK STACKED */
+
+if(document.getElementById("walkChart")){
+echarts.init(document.getElementById("walkChart")).setOption({
+tooltip:{trigger:'axis'},
+legend:{data:['Plan','Actual']},
+xAxis:{type:'category',data:months},
+yAxis:{type:'value'},
+series:[
+{name:'Plan',type:'bar',stack:'total',data:walkPlan},
+{name:'Actual',type:'bar',stack:'total',data:walkActual}
+]
+})
+}
+
+
+/* AUDIT AREA */
+
+if(document.getElementById("auditChart")){
+echarts.init(document.getElementById("auditChart")).setOption({
+tooltip:{trigger:'axis'},
+legend:{data:['Planned','Conducted']},
+xAxis:{type:'category',data:months},
+yAxis:{type:'value'},
+series:[
+{name:'Planned',type:'line',areaStyle:{},data:auditPlan},
+{name:'Conducted',type:'line',areaStyle:{},data:auditActual}
+]
+})
+}
+
+
+/* MEETING GAUGE */
+
+/* MEETING COMPLIANCE (BAR + TREND LINE) */
+
+if(document.getElementById("meetingChart")){
+
+echarts.init(document.getElementById("meetingChart")).setOption({
+
+tooltip:{trigger:'axis'},
+
+legend:{data:['Compliance %','Trend']},
+
+xAxis:{
+type:'category',
+data:months
+},
+
+yAxis:{
+type:'value',
+max:100
+},
+
+series:[
+
+{
+name:'Compliance %',
+type:'bar',
+data:meeting,
+itemStyle:{
+color:'#3b82f6'
+}
+},
+
+{
+name:'Trend',
+type:'line',
+smooth:true,
+data:meeting,
+lineStyle:{
+width:3
+}
+}
+
+]
+
+})
+
+}
+
+
+/* OBSERVATIONS */
+
+if(document.getElementById("observationChart")){
+
+echarts.init(document.getElementById("observationChart")).setOption({
+
+tooltip:{trigger:'axis'},
+
+xAxis:{type:'category',data:months},
+
+yAxis:{type:'value'},
+
+series:[
+{name:'Observations',type:'bar',data:observations}
+]
+
+})
+
+}
+
+
+/* COMMITTEE MEETINGS */
+
+if(document.getElementById("committeeChart")){
+
+echarts.init(document.getElementById("committeeChart")).setOption({
+
+tooltip:{trigger:'axis'},
+
+legend:{data:['Planned','Actual']},
+
+xAxis:{type:'category',data:months},
+
+yAxis:{type:'value'},
+
+series:[
+{name:'Planned',type:'bar',data:committeePlan},
+{name:'Actual',type:'bar',data:committeeActual}
+]
+
+})
+
+}
+
+
+/* TRAINING */
+
+if(document.getElementById("trainingChart")){
+
+echarts.init(document.getElementById("trainingChart")).setOption({
+
+tooltip:{trigger:'axis'},
+
+xAxis:{type:'category',data:months},
+
+yAxis:{type:'value'},
+
+series:[
+{name:'Training %',type:'line',smooth:true,data:training}
+]
+
+})
+
+}
+
+
+/* LTI */
+
+if(document.getElementById("ltiChart")){
+echarts.init(document.getElementById("ltiChart")).setOption({
+tooltip:{trigger:'axis'},
+xAxis:{type:'category',data:months},
+yAxis:{type:'value'},
+series:[{
+name:'LTI',
+type:'line',
+smooth:true,
+areaStyle:{},
+data:lti
+}]
+})
+}
+
+
+/* INCIDENT STACKED */
+
+if(document.getElementById("incidentChart")){
+echarts.init(document.getElementById("incidentChart")).setOption({
+tooltip:{trigger:'axis'},
+legend:{data:['Recordable','First Aid']},
+xAxis:{type:'category',data:months},
+yAxis:{type:'value'},
+series:[
+{name:'Recordable',type:'bar',stack:'cases',data:recordable},
+{name:'First Aid',type:'bar',stack:'cases',data:firstAid}
+]
+})
+}
+
+
+/* FATALITY TREND */
+
+if(document.getElementById("fatalityChart")){
+
+echarts.init(document.getElementById("fatalityChart")).setOption({
+
+tooltip:{trigger:'axis'},
+
+xAxis:{type:'category',data:months},
+
+yAxis:{type:'value'},
+
+series:[
+{name:'Fatality',type:'line',smooth:true,data:fatality}
+]
+
+})
+
+}
+
+
+/* HIPO EVENTS */
+
+if(document.getElementById("hipoChart")){
+
+echarts.init(document.getElementById("hipoChart")).setOption({
+
+tooltip:{trigger:'axis'},
+
+xAxis:{type:'category',data:months},
+
+yAxis:{type:'value'},
+
+series:[
+{name:'HIPO',type:'bar',data:hipo}
+]
+
+})
+
+}
+
+
+/* DAYS LOST */
+
+if(document.getElementById("daysLostChart")){
+
+echarts.init(document.getElementById("daysLostChart")).setOption({
+
+tooltip:{trigger:'axis'},
+
+xAxis:{type:'category',data:months},
+
+yAxis:{type:'value'},
+
+series:[
+{name:'Days Lost',type:'line',data:daysLost}
+]
+
+})
+
+}
+</script>
+
+
+
+<script>
+
+document.addEventListener("DOMContentLoaded",function(){
+
+const plantSelect=document.getElementById("plantSelect")
+const wasteType=document.getElementById("wasteType")
+
+function updateDashboard(){
+
+let plant=plantSelect.value
+let type=wasteType.value
+
+let url=new URL(window.location.href)
+
+url.searchParams.set("plant_id",plant)
+url.searchParams.set("type",type)
+
+window.location.href=url.toString()
+
+}
+
+if(plantSelect) plantSelect.addEventListener("change",updateDashboard)
+if(wasteType) wasteType.addEventListener("change",updateDashboard)
+
+})
+
+</script>
+
+{% endblock %}
